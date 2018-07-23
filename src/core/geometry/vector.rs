@@ -203,7 +203,7 @@ pub struct Vec3<T: VecItem> {
 }
 
 impl<T: VecItem> Vec3<T> {
-    /// Instantiate a new two-dimensional vector.
+    /// Instantiate a new three-dimensional vector.
     pub fn new(x: T, y: T, z: T) -> Vec3<T> {
         Vec3 { x, y, z }
     }
@@ -340,24 +340,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn vec2_operators() {
-        let mut a = Vec2i::new(0, 1);
+    fn vec2_basic_operators() {
+        let a = Vec2i::new(0, 1);
         let b = Vec2i::new(2, 3);
         let f = Vec2f::new(5.0, 10.0);
 
-        // Indexing
         assert_eq!(a[0], 0);
         assert_eq!(a[1], 1);
 
-        // Primitive operations
         assert_eq!(a + b, Vec2i::new(2, 4));
         assert_eq!(a - b, Vec2i::new(-2, -2));
         assert_eq!(a * 2, Vec2i::new(0, 2));
-
         assert_eq!(a / 2, Vec2i::new(0, 0));
         assert_eq!(f / 2.0, Vec2f::new(2.5, 5.0));
+    }
 
-        // Assignment operations
+    #[test]
+    fn vec2_assignment_operators() {
+        let mut a = Vec2i::new(0, 1);
+        let b = Vec2i::new(2, 3);
+        
         a += b;
         assert_eq!(a, Vec2i::new(2, 4));
         a -= b;
