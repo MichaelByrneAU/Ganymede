@@ -2,32 +2,32 @@
 //!
 //! Generic implementations of two and three-dimensional vectors.
 //! Convenience type aliases are provided for the isize and f64 item
-//! types. A number of overloaded operators have been provided, 
+//! types. A number of overloaded operators have been provided,
 //! including:
 //! * Element-wise addition
 //! * Element-wise subtraction
 //! * Multiplication by scalar (broadcasting, note that this is not
 //! commutative - only vec * s is valid)
 //! * Division by scalar (broadcasting, see above)
-//! 
+//!
 //! Assignment equivalents of the above operations are also available,
-//! as well as indexing operations. 
-//! 
+//! as well as indexing operations.
+//!
 //! ```
 //! # use ganymede::core::geometry::vector::*;
 //! let mut a = Vec2i::new(1, 2);
 //! let b = Vec2i::new(3, 4);
-//! 
+//!
 //! let _ = a + b;
 //! let _ = a - b;
 //! let _ = a * 2;
 //! let _ = a / 2;
-//! 
+//!
 //! a += b;
 //! a -= b;
 //! a *= 2;
 //! a /= 2;
-//! 
+//!
 //! assert_eq!(a[0], 1); // a[0] == 1
 //! ```
 
@@ -83,18 +83,10 @@ impl<T: VecItem> Vec for Vec2<T> {
 // VecFloat trait
 
 impl<T: VecItem + Float> VecFloat for Vec2<T> {
-    /// Tests whether any elements of the Vector2 are NaNs.
-    ///
-    /// ```
-    /// # use ganymede::core::geometry::vector::*;
-    /// let vec2_a = Vec2::new(1.0, 2.0);
-    /// let vec2_b = Vec2::new(1.0, std::f64::NAN);
-    ///
-    /// assert!(!vec2_a.has_nans()); // false!
-    /// assert!(vec2_b.has_nans()); // true!
-    /// ```
+    /// Tests whether any elements of the Vector2 are NaNs or
+    /// infinity.
     fn has_nans(&self) -> bool {
-        self.x.is_nan() || self.y.is_nan()
+        self.x.is_nan() || self.y.is_nan() || self.x.is_infinite() || self.y.is_infinite()
     }
 }
 
@@ -214,18 +206,15 @@ impl<T: VecItem> Vec for Vec3<T> {
 }
 
 impl<T: VecItem + Float> VecFloat for Vec3<T> {
-    /// Tests whether any elements of the Vector3 are NaNs.
-    ///
-    /// ```
-    /// # use ganymede::core::geometry::vector::*;
-    /// let vec3_a = Vec3::new(1.0, 2.0, 3.0);
-    /// let vec3_b = Vec3::new(1.0, 2.0, std::f64::NAN);
-    ///
-    /// assert!(!vec3_a.has_nans()); // false!
-    /// assert!(vec3_b.has_nans()); // true!
-    /// ```
+    /// Tests whether any elements of the Vector2 are NaNs or
+    /// infinity.
     fn has_nans(&self) -> bool {
-        self.x.is_nan() || self.y.is_nan() || self.z.is_nan()
+        self.x.is_nan()
+            || self.y.is_nan()
+            || self.z.is_nan()
+            || self.x.is_infinite()
+            || self.y.is_infinite()
+            || self.z.is_infinite()
     }
 }
 
@@ -336,17 +325,42 @@ impl<T: VecItem + DivAssign> DivAssign<T> for Vec3<T> {
 }
 
 #[cfg(test)]
+#[cfg_attr(tarpaulin, skip)]
 mod tests {
     use super::*;
+
+    use std;
+
+    // Vec2 tests
+
+    #[test]
+    fn vec2_indexing() {
+        let a = Vec2i::new(0, 1);
+        assert_eq!(a[1], 1);
+
+        let mut a_mut = Vec2i::new(0, 1);
+        a_mut[1] = 2;
+        assert_eq!(a_mut[1], 2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn vec2_index_out_of_bounds() {
+        let _ = Vec2i::new(0, 1)[2];
+    }
+
+    #[test]
+    #[should_panic]
+    fn vec2_index_mut_out_of_bounds() {
+        let mut a_mut = Vec2::new(0, 1);
+        a_mut[2] = 2;
+    }
 
     #[test]
     fn vec2_basic_operators() {
         let a = Vec2i::new(0, 1);
         let b = Vec2i::new(2, 3);
         let f = Vec2f::new(5.0, 10.0);
-
-        assert_eq!(a[0], 0);
-        assert_eq!(a[1], 1);
 
         assert_eq!(a + b, Vec2i::new(2, 4));
         assert_eq!(a - b, Vec2i::new(-2, -2));
@@ -359,7 +373,7 @@ mod tests {
     fn vec2_assignment_operators() {
         let mut a = Vec2i::new(0, 1);
         let b = Vec2i::new(2, 3);
-        
+
         a += b;
         assert_eq!(a, Vec2i::new(2, 4));
         a -= b;
@@ -368,5 +382,80 @@ mod tests {
         assert_eq!(a, Vec2i::new(0, 2));
         a /= 2;
         assert_eq!(a, Vec2i::new(0, 1));
+    }
+
+    #[test]
+    fn vec2_has_nans() {
+        let f1 = Vec2f::new(1.0, 2.0);
+        let f2 = Vec2f::new(1.0, std::f64::NAN);
+        let f3 = Vec2f::new(1.0, std::f64::INFINITY);
+
+        assert!(!f1.has_nans());
+        assert!(f2.has_nans());
+        assert!(f3.has_nans());
+    }
+
+    // Vec3 tests
+
+    #[test]
+    fn vec3_indexing() {
+        let a = Vec3i::new(0, 1, 2);
+        assert_eq!(a[2], 2);
+
+        let mut a_mut = Vec3i::new(0, 1, 2);
+        a_mut[2] = 3;
+        assert_eq!(a_mut[2], 3);
+    }
+
+    #[test]
+    #[should_panic]
+    fn vec3_index_out_of_bounds() {
+        let _ = Vec3i::new(0, 1, 2)[3];
+    }
+
+    #[test]
+    #[should_panic]
+    fn vec3_index_mut_out_of_bounds() {
+        let mut a_mut = Vec3::new(0, 1, 2);
+        a_mut[3] = 3;
+    }
+
+    #[test]
+    fn vec3_basic_operators() {
+        let a = Vec3i::new(0, 1, 2);
+        let b = Vec3i::new(3, 4, 5);
+        let f = Vec3f::new(5.0, 10.0, 20.0);
+
+        assert_eq!(a + b, Vec3i::new(3, 5, 7));
+        assert_eq!(a - b, Vec3i::new(-3, -3, -3));
+        assert_eq!(a * 2, Vec3i::new(0, 2, 4));
+        assert_eq!(a / 2, Vec3i::new(0, 0, 1));
+        assert_eq!(f / 2.0, Vec3f::new(2.5, 5.0, 10.0));
+    }
+
+    #[test]
+    fn vec3_assignment_operators() {
+        let mut a = Vec3i::new(0, 1, 2);
+        let b = Vec3i::new(3, 4, 5);
+
+        a += b;
+        assert_eq!(a, Vec3i::new(3, 5, 7));
+        a -= b;
+        assert_eq!(a, Vec3i::new(0, 1, 2));
+        a *= 2;
+        assert_eq!(a, Vec3i::new(0, 2, 4));
+        a /= 2;
+        assert_eq!(a, Vec3i::new(0, 1, 2));
+    }
+
+    #[test]
+    fn vec3_has_nans() {
+        let f1 = Vec3f::new(1.0, 2.0, 3.0);
+        let f2 = Vec3f::new(1.0, std::f64::NAN, 3.0);
+        let f3 = Vec3f::new(1.0, std::f64::INFINITY, 3.0);
+
+        assert!(!f1.has_nans());
+        assert!(f2.has_nans());
+        assert!(f3.has_nans());
     }
 }
