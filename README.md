@@ -2,7 +2,8 @@
 
 ------------
 
-[![build status](https://travis-ci.com/MichaelByrneAU/Ganymede.svg?branch=master)](https://travis-ci.com/MichaelByrneAU/Ganymede) [![dependency status](https://deps.rs/repo/github/MichaelByrneAU/Ganymede/status.svg)](https://deps.rs/repo/github/MichaelByrneAU/Ganymede) ![lines of code](https://tokei.rs/b1/github/MichaelByrneAU/Ganymede?category=code "Lines of Code") [![Coverage Status](https://coveralls.io/repos/github/MichaelByrneAU/Ganymede/badge.svg?branch=master)](https://coveralls.io/github/MichaelByrneAU/Ganymede?branch=master)
+[![Travis CI](https://img.shields.io/travis/com/MichaelByrneAU/Ganymede.svg)](https://travis-ci.com/MichaelByrneAU/Ganymede) ![Dependency Status](https://deps.rs/repo/github/MichaelByrneAU/Ganymede/status.svg) ![lines of code](https://tokei.rs/b1/github/MichaelByrneAU/Ganymede?category=code "Lines of Code")
+[![Test Coverage](https://img.shields.io/coveralls/github/MichaelByrneAU/Ganymede.svg)](https://coveralls.io/github/MichaelByrneAU/Ganymede)
 
 A physically-based rendering library implemented in Rust, using principles and techniques outlined in [PBRT](http://www.pbrt.org/ "PBRT"). 
 
