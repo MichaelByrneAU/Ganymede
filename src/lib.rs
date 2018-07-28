@@ -6,6 +6,7 @@
 //! [rust]: https://www.rust-lang.org/en-US
 //! [pbrt]: http://www.pbrt.org/
 
+extern crate noisy_float;
 extern crate num;
 
 // Public exports

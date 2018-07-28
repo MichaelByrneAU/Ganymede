@@ -1,481 +1,422 @@
-//! Two and three-dimensional vector representations.
-//!
-//! Generic implementations of two and three-dimensional vectors.
-//! Convenience type aliases are provided for the isize and f64 item
-//! types. A number of overloaded operators have been provided,
-//! including:
-//! * Element-wise addition
-//! * Element-wise subtraction
-//! * Multiplication by scalar (broadcasting, note that this is not
-//! commutative - only vec * s is valid)
-//! * Division by scalar (broadcasting, see above)
-//!
-//! Assignment equivalents of the above operations are also available,
-//! as well as indexing operations.
-//!
-//! ```
-//! # use ganymede::core::geometry::vector::*;
-//! let mut a = Vec2i::new(1, 2);
-//! let b = Vec2i::new(3, 4);
-//!
-//! let _ = a + b;
-//! let _ = a - b;
-//! let _ = a * 2;
-//! let _ = a / 2;
-//!
-//! a += b;
-//! a -= b;
-//! a *= 2;
-//! a /= 2;
-//!
-//! assert_eq!(a[0], 1); // a[0] == 1
-//! ```
+//! Vector representations for two and three dimensions.
 
-use num::{abs, Float, Integer, Num, Signed, Zero};
 use std::cmp::{max, min};
-use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+};
 
-/// A trait implemented by all vectors.
-pub trait Vec {
-    type Item: VecItem;
-}
+use noisy_float::prelude::*;
+use num::{abs, Float, Signed, Zero};
 
-/// A trait implemented by all vector items.
-pub trait VecItem: Copy + Clone + Default + PartialEq {}
+use super::normal::{Normal2, Normal3};
+use super::ops::{Cross, Dot, FaceForward, Length, Normalise};
+use super::{Prim, PrimFloat, PrimItem, PrimSigned};
 
-/// A trait for vectors that contain numbers.
-pub trait VecNum: Vec
-where
-    Self::Item: VecItem + Num,
-{
-    fn dot(self, other: Self) -> Self::Item;
-}
+/// Three-dimensional vector of integers.
+pub type Vector2i = Vector2<isize>;
+/// Three-dimensional vector of floats.
+pub type Vector2f = Vector2<R64>;
+/// Three-dimensional vector of integers.
+pub type Vector3i = Vector3<isize>;
+/// Three-dimensional vector of floats.
+pub type Vector3f = Vector3<R64>;
 
-/// A trait for vectors that contain signed numbers.
-pub trait VecSigned: Vec
-where
-    Self::Item: VecItem + Signed,
-{
-    fn dot_abs(self, other: Self) -> Self::Item;
-}
-
-/// A trait for vectors that contain integers.
-pub trait VecInt: Vec
-where
-    Self::Item: VecItem + Integer,
-{
-    fn min(self, other: Self) -> Self;
-    fn max(self, other: Self) -> Self;
-    fn min_component(&self) -> Self::Item;
-    fn max_component(&self) -> Self::Item;
-}
-
-/// A trait for vectors that contain floats.
-pub trait VecFloat: Vec
-where
-    Self::Item: VecItem + Float,
-{
-    fn has_nans(&self) -> bool;
-    fn length_squared(&self) -> Self::Item;
-    fn length(&self) -> Self::Item;
-    fn normalise(&self) -> Self;
-    fn min(self, other: Self) -> Self;
-    fn max(self, other: Self) -> Self;
-    fn min_component(&self) -> Self::Item;
-    fn max_component(&self) -> Self::Item;
-}
-
-impl VecItem for isize {}
-impl VecItem for f64 {}
-
-/// A 2D vector of floats.
-pub type Vec2f = Vec2<f64>;
-/// A 2D vector of integers.
-pub type Vec2i = Vec2<isize>;
-/// A 3D vector of floats.
-pub type Vec3f = Vec3<f64>;
-/// A 3D vector of integers.
-pub type Vec3i = Vec3<isize>;
-
-/// A generic 2D vector.
+/// A generic, two-dimensional vector.
 #[derive(Copy, Clone, Debug, Default, Hash, Eq, PartialEq)]
-pub struct Vec2<T: VecItem> {
+pub struct Vector2<T: PrimItem> {
     pub x: T,
     pub y: T,
 }
 
-impl<T: VecItem> Vec2<T> {
-    /// Instantiate a new two-dimensional vector.
-    pub fn new(x: T, y: T) -> Vec2<T> {
-        Vec2 { x, y }
-    }
-}
+// Prim trait implementation
 
-// Vec trait
-
-impl<T: VecItem> Vec for Vec2<T> {
+impl<T: PrimItem> Prim for Vector2<T> {
     type Item = T;
-}
 
-// VecNum trait
-
-impl<T: VecItem + Num> VecNum for Vec2<T> {
-    fn dot(self, other: Self) -> T {
-        self.x * other.x + self.y * other.y
-    }
-}
-
-// VecSigned trait
-
-impl<T: VecItem + Signed> VecSigned for Vec2<T> {
-    fn dot_abs(self, other: Self) -> T {
-        abs(self.dot(other))
-    }
-}
-
-// VecInt trait
-
-impl<T: VecItem + Integer> VecInt for Vec2<T> {
-    fn min(self, other: Self) -> Self {
-        Vec2::new(min(self.x, other.x), min(self.y, other.y))
-    }
-
-    fn max(self, other: Self) -> Self {
-        Vec2::new(max(self.x, other.x), max(self.y, other.y))
-    }
-
-    fn min_component(&self) -> T {
+    fn min_component(self) -> Self::Item {
         min(self.x, self.y)
     }
 
-    fn max_component(&self) -> T {
+    fn max_component(self) -> Self::Item {
         max(self.x, self.y)
     }
-}
 
-// VecFloat trait
-
-impl<T: VecItem + Float> VecFloat for Vec2<T> {
-    /// Tests whether any elements of the Vector2 are NaNs or
-    /// infinity.
-    fn has_nans(&self) -> bool {
-        self.x.is_nan() || self.y.is_nan() || self.x.is_infinite() || self.y.is_infinite()
+    fn min_dimension(self) -> usize {
+        if self.x < self.y {
+            0
+        } else {
+            1
+        }
     }
 
-    fn length_squared(&self) -> Self::Item {
-        self.x * self.x + self.y * self.y
-    }
-
-    fn length(&self) -> Self::Item {
-        self.length_squared().sqrt()
-    }
-
-    fn normalise(&self) -> Self {
-        *self / self.length()
+    fn max_dimension(self) -> usize {
+        if self.x > self.y {
+            0
+        } else {
+            1
+        }
     }
 
     fn min(self, other: Self) -> Self {
-        Vec2::new(self.x.min(other.x), self.y.min(other.y))
+        Vector2 {
+            x: min(self.x, other.x),
+            y: min(self.y, other.y),
+        }
     }
 
     fn max(self, other: Self) -> Self {
-        Vec2::new(self.x.max(other.x), self.y.max(other.y))
+        Vector2 {
+            x: max(self.x, other.x),
+            y: max(self.y, other.y),
+        }
+    }
+}
+
+// PrimSigned trait implementation
+
+impl<T: PrimItem + Signed> PrimSigned for Vector2<T> {
+    fn abs(self) -> Self {
+        Vector2 {
+            x: abs(self.x),
+            y: abs(self.y),
+        }
+    }
+}
+
+// PrimFloat trait implementation
+
+impl<T: PrimItem + Float> PrimFloat for Vector2<T> {
+    fn floor(self) -> Self {
+        Vector2 {
+            x: self.x.floor(),
+            y: self.y.floor(),
+        }
     }
 
-    fn min_component(&self) -> Self::Item {
-        self.x.min(self.y)
+    fn ceil(self) -> Self {
+        Vector2 {
+            x: self.x.ceil(),
+            y: self.y.ceil(),
+        }
+    }
+}
+
+// Constructors
+
+impl<T: PrimItem> Vector2<T> {
+    /// Construct a new Vector2 from individual component values.
+    pub fn new(x: T, y: T) -> Self {
+        Vector2 { x, y }
     }
 
-    fn max_component(&self) -> Self::Item {
-        self.x.max(self.y)
+    /// Construct a new Normal2 from a Vector2.
+    pub fn to_normal(self) -> Normal2<T> {
+        Normal2 {
+            x: self.x,
+            y: self.y,
+        }
     }
 }
 
 // Indexing traits
 
-impl<T: VecItem> Index<u8> for Vec2<T> {
+impl<T: PrimItem> Index<usize> for Vector2<T> {
     type Output = T;
 
-    fn index(&self, index: u8) -> &Self::Output {
+    fn index(&self, index: usize) -> &Self::Output {
         match index {
             0 => &self.x,
             1 => &self.y,
-            _ => panic!("index out of bounds (Vec2)"),
+            _ => panic!("index out of bounds (Vector2)"),
         }
     }
 }
 
-impl<T: VecItem> IndexMut<u8> for Vec2<T> {
-    fn index_mut(&mut self, index: u8) -> &mut Self::Output {
+impl<T: PrimItem> IndexMut<usize> for Vector2<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         match index {
             0 => &mut self.x,
             1 => &mut self.y,
-            _ => panic!("index out of bounds (Vec2)"),
+            _ => panic!("index out of bounds (Vector2)"),
         }
     }
 }
 
-impl<T: VecItem> Vec2<T> {
-    pub fn permute(&self, x: u8, y: u8) -> Vec2<T> {
-        Vec2::new(self[x], self[y])
+impl<T: PrimItem> Vector2<T> {
+    pub fn permute(&self, x: usize, y: usize) -> Vector2<T> {
+        Vector2 {
+            x: self[x],
+            y: self[y],
+        }
     }
 }
 
 // Operator traits
 
-impl<T: VecItem + Add<Output = T>> Add for Vec2<T> {
-    type Output = Vec2<T>;
+impl<T: PrimItem + Add<Output = T>> Add for Vector2<T> {
+    type Output = Vector2<T>;
 
-    fn add(self, other: Vec2<T>) -> Self::Output {
-        Vec2 {
+    fn add(self, other: Vector2<T>) -> Self::Output {
+        Vector2 {
             x: self.x + other.x,
             y: self.y + other.y,
         }
     }
 }
 
-impl<T: VecItem + AddAssign> AddAssign for Vec2<T> {
-    fn add_assign(&mut self, other: Vec2<T>) {
+impl<T: PrimItem + AddAssign> AddAssign for Vector2<T> {
+    fn add_assign(&mut self, other: Vector2<T>) {
         self.x += other.x;
         self.y += other.y;
     }
 }
 
-impl<T: VecItem + Sub<Output = T>> Sub for Vec2<T> {
-    type Output = Vec2<T>;
+impl<T: PrimItem + Sub<Output = T>> Sub for Vector2<T> {
+    type Output = Vector2<T>;
 
-    fn sub(self, other: Vec2<T>) -> Self::Output {
-        Vec2 {
+    fn sub(self, other: Vector2<T>) -> Self::Output {
+        Vector2 {
             x: self.x - other.x,
             y: self.y - other.y,
         }
     }
 }
 
-impl<T: VecItem + SubAssign> SubAssign for Vec2<T> {
-    fn sub_assign(&mut self, other: Vec2<T>) {
+impl<T: PrimItem + SubAssign> SubAssign for Vector2<T> {
+    fn sub_assign(&mut self, other: Vector2<T>) {
         self.x -= other.x;
         self.y -= other.y;
     }
 }
 
-impl<T: VecItem + Mul<T, Output = T>> Mul<T> for Vec2<T> {
-    type Output = Vec2<T>;
+impl<T: PrimItem + Mul<T, Output = T>> Mul<T> for Vector2<T> {
+    type Output = Vector2<T>;
 
     fn mul(self, rhs: T) -> Self::Output {
-        Vec2 {
+        Vector2 {
             x: self.x * rhs,
             y: self.y * rhs,
         }
     }
 }
 
-impl<T: VecItem + MulAssign> MulAssign<T> for Vec2<T> {
+impl<T: PrimItem + MulAssign> MulAssign<T> for Vector2<T> {
     fn mul_assign(&mut self, rhs: T) {
         self.x *= rhs;
         self.y *= rhs;
     }
 }
 
-impl<T: VecItem + Div<T, Output = T>> Div<T> for Vec2<T> {
-    type Output = Vec2<T>;
+impl<T: PrimItem + Div<T, Output = T>> Div<T> for Vector2<T> {
+    type Output = Vector2<T>;
 
     fn div(self, rhs: T) -> Self::Output {
-        Vec2 {
+        Vector2 {
             x: self.x / rhs,
             y: self.y / rhs,
         }
     }
 }
 
-impl<T: VecItem + DivAssign> DivAssign<T> for Vec2<T> {
+impl<T: PrimItem + DivAssign> DivAssign<T> for Vector2<T> {
     fn div_assign(&mut self, rhs: T) {
         self.x /= rhs;
         self.y /= rhs;
     }
 }
 
-/// A generic 3D vector.
+impl<T: PrimItem + Signed> Neg for Vector2<T> {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Vector2 {
+            x: -self.x,
+            y: -self.y,
+        }
+    }
+}
+
+// Length operation
+
+impl<T: PrimItem + Float> Length for Vector2<T> {
+    fn length_squared(self) -> Self::Item {
+        self.x * self.x + self.y * self.y
+    }
+}
+
+// Normalise operation
+
+impl<T: PrimItem + Float> Normalise for Vector2<T> {
+    fn normalise(self) -> Self {
+        self / self.length()
+    }
+}
+
+// Dot operation
+
+impl<T: PrimItem + Signed> Dot for Vector2<T> {
+    fn dot(self, rhs: Self) -> Self::Item {
+        self.x * rhs.x + self.y * rhs.y
+    }
+}
+
+impl<T: PrimItem + Signed> Dot<Normal2<T>> for Vector2<T> {
+    fn dot(self, rhs: Normal2<T>) -> Self::Item {
+        self.x * rhs.x + self.y * rhs.y
+    }
+}
+
+/// A generic, three-dimensional vector.
 #[derive(Copy, Clone, Debug, Default, Hash, Eq, PartialEq)]
-pub struct Vec3<T: VecItem> {
+pub struct Vector3<T: PrimItem> {
     pub x: T,
     pub y: T,
     pub z: T,
 }
 
-impl<T: VecItem> Vec3<T> {
-    /// Instantiate a new three-dimensional vector.
-    pub fn new(x: T, y: T, z: T) -> Vec3<T> {
-        Vec3 { x, y, z }
-    }
-}
+// Prim trait implementation
 
-// Vec trait
-
-impl<T: VecItem> Vec for Vec3<T> {
+impl<T: PrimItem> Prim for Vector3<T> {
     type Item = T;
-}
 
-// VecNum trait
-
-impl<T: VecItem + Num> VecNum for Vec3<T> {
-    fn dot(self, other: Self) -> T {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-}
-
-// VecSigned trait
-
-impl<T: VecItem + Signed> VecSigned for Vec3<T> {
-    fn dot_abs(self, other: Self) -> T {
-        abs(self.dot(other))
-    }
-}
-
-// VecInt trait
-
-impl<T: VecItem + Integer> VecInt for Vec3<T> {
-    fn min(self, other: Self) -> Self {
-        Vec3::new(
-            min(self.x, other.x),
-            min(self.y, other.y),
-            min(self.z, other.z),
-        )
-    }
-
-    fn max(self, other: Self) -> Self {
-        Vec3::new(
-            max(self.x, other.x),
-            max(self.y, other.y),
-            max(self.z, other.z),
-        )
-    }
-
-    fn min_component(&self) -> Self::Item {
+    fn min_component(self) -> Self::Item {
         min(self.x, min(self.y, self.z))
     }
 
-    fn max_component(&self) -> Self::Item {
+    fn max_component(self) -> Self::Item {
         max(self.x, max(self.y, self.z))
     }
-}
 
-// VecFloat trait
-
-impl<T: VecItem + Float> VecFloat for Vec3<T> {
-    /// Tests whether any elements of the Vector2 are NaNs or
-    /// infinity.
-    fn has_nans(&self) -> bool {
-        self.x.is_nan()
-            || self.y.is_nan()
-            || self.z.is_nan()
-            || self.x.is_infinite()
-            || self.y.is_infinite()
-            || self.z.is_infinite()
+    fn min_dimension(self) -> usize {
+        if self.x < self.y && self.x < self.z {
+            0
+        } else if self.y < self.z {
+            1
+        } else {
+            2
+        }
     }
 
-    fn length_squared(&self) -> Self::Item {
-        self.x * self.x + self.y * self.y + self.z * self.z
-    }
-
-    fn length(&self) -> Self::Item {
-        self.length_squared().sqrt()
-    }
-
-    fn normalise(&self) -> Self {
-        *self / self.length()
+    fn max_dimension(self) -> usize {
+        if self.x > self.y && self.x > self.z {
+            0
+        } else if self.y > self.z {
+            1
+        } else {
+            2
+        }
     }
 
     fn min(self, other: Self) -> Self {
-        Vec3::new(
-            self.x.min(other.x),
-            self.y.min(other.y),
-            self.z.min(other.z),
-        )
+        Vector3 {
+            x: min(self.x, other.x),
+            y: min(self.y, other.y),
+            z: min(self.z, other.z),
+        }
     }
 
     fn max(self, other: Self) -> Self {
-        Vec3::new(
-            self.x.max(other.x),
-            self.y.max(other.y),
-            self.z.max(other.z),
-        )
-    }
-
-    fn min_component(&self) -> Self::Item {
-        self.x.min(self.y.min(self.z))
-    }
-
-    fn max_component(&self) -> Self::Item {
-        self.x.max(self.y.max(self.z))
+        Vector3 {
+            x: max(self.x, other.x),
+            y: max(self.y, other.y),
+            z: max(self.z, other.z),
+        }
     }
 }
 
-// Cross product implementation
+// PrimSigned trait implementation
 
-impl<T: VecItem + Num> Vec3<T> {
-    pub fn cross(self, rhs: Self) -> Self {
-        Vec3::new(
-            self.y * rhs.z - self.z * rhs.y,
-            self.z * rhs.x - self.x * rhs.z,
-            self.x * rhs.y - self.y * rhs.x,
-        )
+impl<T: PrimItem + Signed> PrimSigned for Vector3<T> {
+    fn abs(self) -> Self {
+        Vector3 {
+            x: abs(self.x),
+            y: abs(self.y),
+            z: abs(self.z),
+        }
     }
 }
 
-// Coordinate system implementation
+// PrimFloat trait implementation
 
-impl<T: VecItem + Float> Vec3<T> {
-    pub fn coordinate_system(self) -> (Self, Self, Self) {
-        let v1 = self.normalise();
-        let v2 = match v1.x.abs() > v1.y.abs() {
-            true => Vec3::new(-v1.z, Zero::zero(), v1.x).normalise(),
-            false => Vec3::new(Zero::zero(), v1.z, -v1.y).normalise(),
-        };
-        let v3 = v1.cross(v2);
-        (v1, v2, v3)
+impl<T: PrimItem + Float> PrimFloat for Vector3<T> {
+    fn floor(self) -> Self {
+        Vector3 {
+            x: self.x.floor(),
+            y: self.y.floor(),
+            z: self.z.floor(),
+        }
+    }
+
+    fn ceil(self) -> Self {
+        Vector3 {
+            x: self.x.ceil(),
+            y: self.y.ceil(),
+            z: self.z.ceil(),
+        }
+    }
+}
+
+// Constructors
+
+impl<T: PrimItem> Vector3<T> {
+    /// Construct a new Vector3 from individual component values.
+    pub fn new(x: T, y: T, z: T) -> Self {
+        Vector3 { x, y, z }
+    }
+
+    /// Construct a new Normal3 from a Vector3.
+    pub fn to_normal(self) -> Normal3<T> {
+        Normal3 {
+            x: self.x,
+            y: self.y,
+            z: self.z,
+        }
     }
 }
 
 // Indexing traits
 
-impl<T: VecItem> Index<u8> for Vec3<T> {
+impl<T: PrimItem> Index<usize> for Vector3<T> {
     type Output = T;
 
-    fn index(&self, index: u8) -> &Self::Output {
+    fn index(&self, index: usize) -> &Self::Output {
         match index {
             0 => &self.x,
             1 => &self.y,
             2 => &self.z,
-            _ => panic!("index out of bounds (Vec2)"),
+            _ => panic!("index out of bounds (Vector3)"),
         }
     }
 }
 
-impl<T: VecItem> IndexMut<u8> for Vec3<T> {
-    fn index_mut(&mut self, index: u8) -> &mut Self::Output {
+impl<T: PrimItem> IndexMut<usize> for Vector3<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         match index {
             0 => &mut self.x,
             1 => &mut self.y,
             2 => &mut self.z,
-            _ => panic!("index out of bounds (Vec2)"),
+            _ => panic!("index out of bounds (Vector3)"),
         }
     }
 }
 
-impl<T: VecItem> Vec3<T> {
-    pub fn permute(&self, x: u8, y: u8, z: u8) -> Vec3<T> {
-        Vec3::new(self[x], self[y], self[z])
+impl<T: PrimItem> Vector3<T> {
+    pub fn permute(&self, x: usize, y: usize, z: usize) -> Vector3<T> {
+        Vector3 {
+            x: self[x],
+            y: self[y],
+            z: self[z],
+        }
     }
 }
 
 // Operator traits
 
-impl<T: VecItem + Add<Output = T>> Add for Vec3<T> {
-    type Output = Vec3<T>;
+impl<T: PrimItem + Add<Output = T>> Add for Vector3<T> {
+    type Output = Vector3<T>;
 
-    fn add(self, other: Vec3<T>) -> Self::Output {
-        Vec3 {
+    fn add(self, other: Vector3<T>) -> Self::Output {
+        Vector3 {
             x: self.x + other.x,
             y: self.y + other.y,
             z: self.z + other.z,
@@ -483,19 +424,19 @@ impl<T: VecItem + Add<Output = T>> Add for Vec3<T> {
     }
 }
 
-impl<T: VecItem + AddAssign> AddAssign for Vec3<T> {
-    fn add_assign(&mut self, other: Vec3<T>) {
+impl<T: PrimItem + AddAssign> AddAssign for Vector3<T> {
+    fn add_assign(&mut self, other: Vector3<T>) {
         self.x += other.x;
         self.y += other.y;
         self.z += other.z;
     }
 }
 
-impl<T: VecItem + Sub<Output = T>> Sub for Vec3<T> {
-    type Output = Vec3<T>;
+impl<T: PrimItem + Sub<Output = T>> Sub for Vector3<T> {
+    type Output = Vector3<T>;
 
-    fn sub(self, other: Vec3<T>) -> Self::Output {
-        Vec3 {
+    fn sub(self, other: Vector3<T>) -> Self::Output {
+        Vector3 {
             x: self.x - other.x,
             y: self.y - other.y,
             z: self.z - other.z,
@@ -503,19 +444,19 @@ impl<T: VecItem + Sub<Output = T>> Sub for Vec3<T> {
     }
 }
 
-impl<T: VecItem + SubAssign> SubAssign for Vec3<T> {
-    fn sub_assign(&mut self, other: Vec3<T>) {
+impl<T: PrimItem + SubAssign> SubAssign for Vector3<T> {
+    fn sub_assign(&mut self, other: Vector3<T>) {
         self.x -= other.x;
         self.y -= other.y;
         self.z -= other.z;
     }
 }
 
-impl<T: VecItem + Mul<T, Output = T>> Mul<T> for Vec3<T> {
-    type Output = Vec3<T>;
+impl<T: PrimItem + Mul<T, Output = T>> Mul<T> for Vector3<T> {
+    type Output = Vector3<T>;
 
     fn mul(self, rhs: T) -> Self::Output {
-        Vec3 {
+        Vector3 {
             x: self.x * rhs,
             y: self.y * rhs,
             z: self.z * rhs,
@@ -523,7 +464,7 @@ impl<T: VecItem + Mul<T, Output = T>> Mul<T> for Vec3<T> {
     }
 }
 
-impl<T: VecItem + MulAssign> MulAssign<T> for Vec3<T> {
+impl<T: PrimItem + MulAssign> MulAssign<T> for Vector3<T> {
     fn mul_assign(&mut self, rhs: T) {
         self.x *= rhs;
         self.y *= rhs;
@@ -531,11 +472,11 @@ impl<T: VecItem + MulAssign> MulAssign<T> for Vec3<T> {
     }
 }
 
-impl<T: VecItem + Div<T, Output = T>> Div<T> for Vec3<T> {
-    type Output = Vec3<T>;
+impl<T: PrimItem + Div<T, Output = T>> Div<T> for Vector3<T> {
+    type Output = Vector3<T>;
 
     fn div(self, rhs: T) -> Self::Output {
-        Vec3 {
+        Vector3 {
             x: self.x / rhs,
             y: self.y / rhs,
             z: self.z / rhs,
@@ -543,7 +484,7 @@ impl<T: VecItem + Div<T, Output = T>> Div<T> for Vec3<T> {
     }
 }
 
-impl<T: VecItem + DivAssign> DivAssign<T> for Vec3<T> {
+impl<T: PrimItem + DivAssign> DivAssign<T> for Vector3<T> {
     fn div_assign(&mut self, rhs: T) {
         self.x /= rhs;
         self.y /= rhs;
@@ -551,301 +492,722 @@ impl<T: VecItem + DivAssign> DivAssign<T> for Vec3<T> {
     }
 }
 
+impl<T: PrimItem + Signed> Neg for Vector3<T> {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Vector3 {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
+    }
+}
+
+// Length operation
+
+impl<T: PrimItem + Float> Length for Vector3<T> {
+    fn length_squared(self) -> Self::Item {
+        self.x * self.x + self.y * self.y + self.z * self.z
+    }
+}
+
+// Normalise operation
+
+impl<T: PrimItem + Float> Normalise for Vector3<T> {
+    fn normalise(self) -> Self {
+        self / self.length()
+    }
+}
+
+// Dot operation
+
+impl<T: PrimItem + Signed> Dot for Vector3<T> {
+    fn dot(self, rhs: Self) -> Self::Item {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
+impl<T: PrimItem + Signed> Dot<Normal3<T>> for Vector3<T> {
+    fn dot(self, rhs: Normal3<T>) -> Self::Item {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
+// Cross operation
+
+impl<T: PrimItem + Signed> Cross for Vector3<T> {
+    type Output = Self;
+
+    fn cross(self, rhs: Self) -> Self::Output {
+        Vector3::new(
+            self.y * rhs.z - self.z * rhs.y,
+            self.z * rhs.x - self.x * rhs.z,
+            self.x * rhs.y - self.y * rhs.x,
+        )
+    }
+}
+
+impl<T: PrimItem + Signed> Cross<Normal3<T>> for Vector3<T> {
+    type Output = Self;
+
+    fn cross(self, rhs: Normal3<T>) -> Self::Output {
+        Vector3::new(
+            self.y * rhs.z - self.z * rhs.y,
+            self.z * rhs.x - self.x * rhs.z,
+            self.x * rhs.y - self.y * rhs.x,
+        )
+    }
+}
+
+// Face-forward operation
+
+impl<T: PrimItem + Signed> FaceForward for Vector3<T> {
+    type Output = Self;
+
+    fn face_forward(self, rhs: Self) -> Self::Output {
+        match self.dot(rhs) < Zero::zero() {
+            true => -self,
+            false => self,
+        }
+    }
+}
+
+impl<T: PrimItem + Signed> FaceForward<Normal3<T>> for Vector3<T> {
+    type Output = Self;
+
+    fn face_forward(self, rhs: Normal3<T>) -> Self::Output {
+        match self.dot(rhs) < Zero::zero() {
+            true => -self,
+            false => self,
+        }
+    }
+}
+
+// Coordinate system generation
+
+impl<T: PrimItem + Signed + Float> Vector3<T> {
+    pub fn coordinate_system(self) -> (Self, Self, Self) {
+        let v1 = self.normalise();
+        let v2 = match v1.x.abs() > v1.y.abs() {
+            true => Vector3::new(-v1.z, Zero::zero(), v1.x).normalise(),
+            false => Vector3::new(Zero::zero(), v1.z, -v1.y).normalise(),
+        };
+        let v3 = v1.cross(v2);
+        (v1, v2, v3)
+    }
+}
+
+// Tests
+
 #[cfg(test)]
 #[cfg_attr(tarpaulin, skip)]
 mod tests {
+    use super::super::normal::{Normal2i, Normal3i};
     use super::*;
 
-    use std;
-
-    // Vec2 tests
+    // Vector2 tests
 
     #[test]
-    fn vec2_indexing() {
-        let a = Vec2i::new(0, 1);
-        assert_eq!(a[1], 1);
+    fn vector2_to_normal2() {
+        let v1 = Vector2i::new(1, 2);
 
-        let mut a_mut = Vec2i::new(0, 1);
-        a_mut[1] = 2;
-        assert_eq!(a_mut[1], 2);
+        assert_eq!(v1.to_normal(), Normal2i::new(1, 2));
+    }
+
+    #[test]
+    fn vector2_min_component() {
+        let v1 = Vector2i::new(1, 2);
+        let v2 = Vector2f::new(r64(1.0), r64(2.0));
+
+        assert_eq!(v1.min_component(), 1);
+        assert_eq!(v2.min_component(), r64(1.0));
+    }
+
+    #[test]
+    fn vector2_max_component() {
+        let v1 = Vector2i::new(1, 2);
+        let v2 = Vector2f::new(r64(1.0), r64(2.0));
+
+        assert_eq!(v1.max_component(), 2);
+        assert_eq!(v2.max_component(), r64(2.0));
+    }
+
+    #[test]
+    fn vector2_min_dimension() {
+        let v1 = Vector2i::new(1, 2);
+        let v2 = Vector2f::new(r64(1.0), r64(2.0));
+
+        assert_eq!(v1.min_dimension(), 0);
+        assert_eq!(v2.min_dimension(), 0);
+    }
+
+    #[test]
+    fn vector2_max_dimension() {
+        let v1 = Vector2i::new(1, 2);
+        let v2 = Vector2f::new(r64(1.0), r64(2.0));
+
+        assert_eq!(v1.max_dimension(), 1);
+        assert_eq!(v2.max_dimension(), 1);
+    }
+
+    #[test]
+    fn vector2_min() {
+        let v1 = Vector2i::new(2, 8);
+        let v2 = Vector2i::new(3, 5);
+        let v3 = Vector2f::new(r64(2.0), r64(8.0));
+        let v4 = Vector2f::new(r64(3.0), r64(5.0));
+
+        assert_eq!(v1.min(v2), Vector2i::new(2, 5));
+        assert_eq!(v3.min(v4), Vector2f::new(r64(2.0), r64(5.0)));
+    }
+
+    #[test]
+    fn vector2_max() {
+        let v1 = Vector2i::new(2, 8);
+        let v2 = Vector2i::new(3, 5);
+        let v3 = Vector2f::new(r64(2.0), r64(8.0));
+        let v4 = Vector2f::new(r64(3.0), r64(5.0));
+
+        assert_eq!(v1.max(v2), Vector2i::new(3, 8));
+        assert_eq!(v3.max(v4), Vector2f::new(r64(3.0), r64(8.0)));
+    }
+
+    #[test]
+    fn vector2_abs() {
+        let v1 = Vector2i::new(-1, 2);
+        let v2 = Vector2f::new(r64(-1.0), r64(2.0));
+
+        assert_eq!(v1.abs(), Vector2i::new(1, 2));
+        assert_eq!(v2.abs(), Vector2f::new(r64(1.0), r64(2.0)));
+    }
+
+    #[test]
+    fn vector2_floor() {
+        let v1 = Vector2f::new(r64(1.1), r64(4.2));
+
+        assert_eq!(v1.floor(), Vector2f::new(r64(1.0), r64(4.0)));
+    }
+
+    #[test]
+    fn vector2_ceil() {
+        let v1 = Vector2f::new(r64(1.1), r64(4.2));
+
+        assert_eq!(v1.ceil(), Vector2f::new(r64(2.0), r64(5.0)));
+    }
+
+    #[test]
+    fn vector2_index() {
+        let v1 = Vector2i::new(0, 1);
+
+        assert_eq!(v1[0], 0);
+        assert_eq!(v1[1], 1);
+    }
+
+    #[test]
+    fn vector2_index_mut() {
+        let mut v1 = Vector2i::new(0, 1);
+        v1[0] = 3;
+        v1[1] = 4;
+
+        assert_eq!(v1[0], 3);
+        assert_eq!(v1[1], 4);
     }
 
     #[test]
     #[should_panic]
-    fn vec2_index_out_of_bounds() {
-        let _ = Vec2i::new(0, 1)[2];
+    fn vector2_index_out_of_bounds() {
+        let _ = Vector2i::new(0, 1)[2];
     }
 
     #[test]
     #[should_panic]
-    fn vec2_index_mut_out_of_bounds() {
-        let mut a_mut = Vec2i::new(0, 1);
-        a_mut[2] = 2;
+    fn vector2_index_mut_out_of_bounds() {
+        let mut v1 = Vector2i::new(0, 1);
+        v1[2] = 2;
     }
 
     #[test]
-    fn vec2_permute() {
-        let a = Vec2i::new(1, 2);
-        assert_eq!(a.permute(1, 0), Vec2i::new(2, 1));
+    fn vector2_permute() {
+        let v1 = Vector2i::new(1, 2);
+
+        assert_eq!(v1.permute(1, 0), Vector2i::new(2, 1));
     }
 
     #[test]
-    fn vec2_basic_operators() {
-        let a = Vec2i::new(0, 1);
-        let b = Vec2i::new(2, 3);
-        let f = Vec2f::new(5.0, 10.0);
+    fn vector2_add() {
+        let v1 = Vector2i::new(2, 8);
+        let v2 = Vector2i::new(3, 5);
+        let v3 = Vector2f::new(r64(2.0), r64(8.0));
+        let v4 = Vector2f::new(r64(3.0), r64(5.0));
 
-        assert_eq!(a + b, Vec2i::new(2, 4));
-        assert_eq!(a - b, Vec2i::new(-2, -2));
-        assert_eq!(a * 2, Vec2i::new(0, 2));
-        assert_eq!(a / 2, Vec2i::new(0, 0));
-        assert_eq!(f / 2.0, Vec2f::new(2.5, 5.0));
+        assert_eq!(v1 + v2, Vector2i::new(5, 13));
+        assert_eq!(v3 + v4, Vector2f::new(r64(5.0), r64(13.0)));
     }
 
     #[test]
-    fn vec2_assignment_operators() {
-        let mut a = Vec2i::new(0, 1);
-        let b = Vec2i::new(2, 3);
+    fn vector2_add_assign() {
+        let mut v1 = Vector2i::new(2, 8);
+        let v2 = Vector2i::new(3, 5);
+        v1 += v2;
 
-        a += b;
-        assert_eq!(a, Vec2i::new(2, 4));
-        a -= b;
-        assert_eq!(a, Vec2i::new(0, 1));
-        a *= 2;
-        assert_eq!(a, Vec2i::new(0, 2));
-        a /= 2;
-        assert_eq!(a, Vec2i::new(0, 1));
+        let mut v3 = Vector2f::new(r64(2.0), r64(8.0));
+        let v4 = Vector2f::new(r64(3.0), r64(5.0));
+        v3 += v4;
+
+        assert_eq!(v1, Vector2i::new(5, 13));
+        assert_eq!(v3, Vector2f::new(r64(5.0), r64(13.0)));
     }
 
     #[test]
-    fn vec2_has_nans() {
-        let f1 = Vec2f::new(1.0, 2.0);
-        let f2 = Vec2f::new(1.0, std::f64::NAN);
-        let f3 = Vec2f::new(1.0, std::f64::INFINITY);
+    fn vector2_sub() {
+        let v1 = Vector2i::new(2, 8);
+        let v2 = Vector2i::new(3, 5);
+        let v3 = Vector2f::new(r64(2.0), r64(8.0));
+        let v4 = Vector2f::new(r64(3.0), r64(5.0));
 
-        assert!(!f1.has_nans());
-        assert!(f2.has_nans());
-        assert!(f3.has_nans());
+        assert_eq!(v1 - v2, Vector2i::new(-1, 3));
+        assert_eq!(v3 - v4, Vector2f::new(r64(-1.0), r64(3.0)));
     }
 
     #[test]
-    fn vec2_dot() {
-        let a = Vec2i::new(-1, 2);
-        let b = Vec2i::new(3, -4);
-        assert_eq!(a.dot(b), -11);
-        assert_eq!(a.dot_abs(b), 11)
+    fn vector2_sub_assign() {
+        let mut v1 = Vector2i::new(2, 8);
+        let v2 = Vector2i::new(3, 5);
+        v1 -= v2;
+
+        let mut v3 = Vector2f::new(r64(2.0), r64(8.0));
+        let v4 = Vector2f::new(r64(3.0), r64(5.0));
+        v3 -= v4;
+
+        assert_eq!(v1, Vector2i::new(-1, 3));
+        assert_eq!(v3, Vector2f::new(r64(-1.0), r64(3.0)));
     }
 
     #[test]
-    fn vec2_length() {
-        let a = Vec2f::new(1.0, 2.0);
-        assert_eq!(a.length(), 5.0.sqrt());
+    fn vector2_mul() {
+        let v1 = Vector2i::new(2, 8);
+        let v2 = Vector2f::new(r64(2.0), r64(8.0));
+
+        assert_eq!(v1 * 2, Vector2i::new(4, 16));
+        assert_eq!(v2 * r64(2.0), Vector2f::new(r64(4.0), r64(16.0)));
     }
 
     #[test]
-    fn vec2_normalise() {
-        let a = Vec2f::new(2.0, 2.0);
+    fn vector2_mul_assign() {
+        let mut v1 = Vector2i::new(2, 8);
+        v1 *= 2;
+
+        let mut v2 = Vector2f::new(r64(2.0), r64(8.0));
+        v2 *= r64(2.0);
+
+        assert_eq!(v1, Vector2i::new(4, 16));
+        assert_eq!(v2, Vector2f::new(r64(4.0), r64(16.0)));
+    }
+
+    #[test]
+    fn vector2_div() {
+        let v1 = Vector2i::new(2, 8);
+        let v2 = Vector2f::new(r64(2.0), r64(8.0));
+
+        assert_eq!(v1 / 2, Vector2i::new(1, 4));
+        assert_eq!(v2 / r64(2.0), Vector2f::new(r64(1.0), r64(4.0)));
+    }
+
+    #[test]
+    fn vector2_div_assign() {
+        let mut v1 = Vector2i::new(2, 8);
+        v1 /= 2;
+
+        let mut v2 = Vector2f::new(r64(2.0), r64(8.0));
+        v2 /= r64(2.0);
+
+        assert_eq!(v1, Vector2i::new(1, 4));
+        assert_eq!(v2, Vector2f::new(r64(1.0), r64(4.0)));
+    }
+
+    #[test]
+    fn vector2_neg() {
+        let v1 = Vector2i::new(-1, 2);
+        let v2 = Vector2f::new(r64(-1.0), r64(2.0));
+
+        assert_eq!(-v1, Vector2i::new(1, -2));
+        assert_eq!(-v2, Vector2f::new(r64(1.0), r64(-2.0)));
+    }
+
+    #[test]
+    fn vector2_length_squared() {
+        let v1 = Vector2f::new(r64(1.0), r64(2.0));
+
+        assert_eq!(v1.length_squared(), r64(5.0));
+    }
+
+    #[test]
+    fn vector2_length() {
+        let v1 = Vector2f::new(r64(1.0), r64(2.0));
+
+        assert_eq!(v1.length(), r64(5.0).sqrt());
+    }
+
+    #[test]
+    fn vector2_normalise() {
+        let v1 = Vector2f::new(r64(2.0), r64(2.0));
         assert_eq!(
-            a.normalise(),
-            Vec2f::new(1.0 / 2.0.sqrt(), 1.0 / 2.0.sqrt())
+            v1.normalise(),
+            Vector2f::new(r64(1.0 / 2.0.sqrt()), r64(1.0 / 2.0.sqrt()))
         );
     }
 
     #[test]
-    fn vec2_min() {
-        let a = Vec2i::new(1, 10);
-        let b = Vec2i::new(2, 4);
-        assert_eq!(a.min(b), Vec2i::new(1, 4));
+    fn vector2_dot() {
+        let v1 = Vector2i::new(-1, 2);
+        let v2 = Vector2i::new(3, -4);
 
-        let c = Vec2f::new(1.0, 10.0);
-        let d = Vec2f::new(2.0, 4.0);
-        assert_eq!(c.min(d), Vec2f::new(1.0, 4.0));
+        assert_eq!(v1.dot(v2), -11);
+        assert_eq!(v1.dot_abs(v2), 11);
     }
 
     #[test]
-    fn vec2_max() {
-        let a = Vec2i::new(1, 10);
-        let b = Vec2i::new(2, 4);
-        assert_eq!(a.max(b), Vec2i::new(2, 10));
+    fn vector2_dot_normal2() {
+        let v1 = Vector2i::new(-1, 2);
+        let n1 = Normal2i::new(3, -4);
 
-        let c = Vec2f::new(1.0, 10.0);
-        let d = Vec2f::new(2.0, 4.0);
-        assert_eq!(c.max(d), Vec2f::new(2.0, 10.0));
+        assert_eq!(v1.dot(n1), -11);
+        assert_eq!(v1.dot_abs(n1), 11);
+    }
+
+    // Vector3 tests
+
+    #[test]
+    fn vector3_to_normal3() {
+        let v1 = Vector3i::new(1, 2, 3);
+
+        assert_eq!(v1.to_normal(), Normal3i::new(1, 2, 3));
     }
 
     #[test]
-    fn vec2_min_component() {
-        let a = Vec2i::new(1, 2);
-        let b = Vec2f::new(1.0, 2.0);
-        assert_eq!(a.min_component(), 1);
-        assert_eq!(b.min_component(), 1.0);
+    fn vector3_min_component() {
+        let v1 = Vector3i::new(1, 2, 3);
+        let v2 = Vector3f::new(r64(1.0), r64(2.0), r64(3.0));
+
+        assert_eq!(v1.min_component(), 1);
+        assert_eq!(v2.min_component(), r64(1.0));
     }
 
     #[test]
-    fn vec2_max_component() {
-        let a = Vec2i::new(1, 2);
-        let b = Vec2f::new(1.0, 2.0);
-        assert_eq!(a.max_component(), 2);
-        assert_eq!(b.max_component(), 2.0);
+    fn vector3_max_component() {
+        let v1 = Vector3i::new(1, 2, 3);
+        let v2 = Vector3f::new(r64(1.0), r64(2.0), r64(3.0));
+
+        assert_eq!(v1.max_component(), 3);
+        assert_eq!(v2.max_component(), r64(3.0));
     }
 
-    // Vec3 tests
+    #[test]
+    fn vector3_min_dimension() {
+        let v1 = Vector3i::new(1, 2, 3);
+        let v2 = Vector3f::new(r64(1.0), r64(2.0), r64(3.0));
+
+        assert_eq!(v1.min_dimension(), 0);
+        assert_eq!(v2.min_dimension(), 0);
+    }
 
     #[test]
-    fn vec3_indexing() {
-        let a = Vec3i::new(0, 1, 2);
-        assert_eq!(a[2], 2);
+    fn vector3_max_dimension() {
+        let v1 = Vector3i::new(1, 2, 3);
+        let v2 = Vector3f::new(r64(1.0), r64(2.0), r64(3.0));
 
-        let mut a_mut = Vec3i::new(0, 1, 2);
-        a_mut[2] = 3;
-        assert_eq!(a_mut[2], 3);
+        assert_eq!(v1.max_dimension(), 2);
+        assert_eq!(v2.max_dimension(), 2);
+    }
+
+    #[test]
+    fn vector3_min() {
+        let v1 = Vector3i::new(2, 8, 4);
+        let v2 = Vector3i::new(3, 5, 6);
+        let v3 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+        let v4 = Vector3f::new(r64(3.0), r64(5.0), r64(6.0));
+
+        assert_eq!(v1.min(v2), Vector3i::new(2, 5, 4));
+        assert_eq!(v3.min(v4), Vector3f::new(r64(2.0), r64(5.0), r64(4.0)));
+    }
+
+    #[test]
+    fn vector3_max() {
+        let v1 = Vector3i::new(2, 8, 4);
+        let v2 = Vector3i::new(3, 5, 6);
+        let v3 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+        let v4 = Vector3f::new(r64(3.0), r64(5.0), r64(6.0));
+
+        assert_eq!(v1.max(v2), Vector3i::new(3, 8, 6));
+        assert_eq!(v3.max(v4), Vector3f::new(r64(3.0), r64(8.0), r64(6.0)));
+    }
+
+    #[test]
+    fn vector3_abs() {
+        let v1 = Vector3i::new(-1, 2, -4);
+        let v2 = Vector3f::new(r64(-1.0), r64(2.0), r64(-4.0));
+
+        assert_eq!(v1.abs(), Vector3i::new(1, 2, 4));
+        assert_eq!(v2.abs(), Vector3f::new(r64(1.0), r64(2.0), r64(4.0)));
+    }
+
+    #[test]
+    fn vector3_floor() {
+        let v1 = Vector3f::new(r64(1.1), r64(4.2), r64(-2.1));
+
+        assert_eq!(v1.floor(), Vector3f::new(r64(1.0), r64(4.0), r64(-3.0)));
+    }
+
+    #[test]
+    fn vector3_ceil() {
+        let v1 = Vector3f::new(r64(1.1), r64(4.2), r64(-2.1));
+
+        assert_eq!(v1.ceil(), Vector3f::new(r64(2.0), r64(5.0), r64(-2.0)));
+    }
+
+    #[test]
+    fn vector3_index() {
+        let v1 = Vector3i::new(0, 1, 2);
+
+        assert_eq!(v1[0], 0);
+        assert_eq!(v1[1], 1);
+        assert_eq!(v1[2], 2);
+    }
+
+    #[test]
+    fn vector3_index_mut() {
+        let mut v1 = Vector3i::new(0, 1, 2);
+        v1[0] = 3;
+        v1[1] = 4;
+        v1[2] = 5;
+
+        assert_eq!(v1[0], 3);
+        assert_eq!(v1[1], 4);
+        assert_eq!(v1[2], 5);
     }
 
     #[test]
     #[should_panic]
-    fn vec3_index_out_of_bounds() {
-        let _ = Vec3i::new(0, 1, 2)[3];
+    fn vector3_index_out_of_bounds() {
+        let _ = Vector3i::new(0, 1, 2)[3];
     }
 
     #[test]
     #[should_panic]
-    fn vec3_index_mut_out_of_bounds() {
-        let mut a_mut = Vec3i::new(0, 1, 2);
-        a_mut[3] = 3;
+    fn vector3_index_mut_out_of_bounds() {
+        let mut v1 = Vector3i::new(0, 1, 2);
+        v1[3] = 3;
     }
 
     #[test]
-    fn vec3_permute() {
-        let a = Vec3i::new(1, 2, 3);
-        assert_eq!(a.permute(2, 1, 0), Vec3i::new(3, 2, 1));
+    fn vector3_permute() {
+        let v1 = Vector3i::new(1, 2, 3);
+
+        assert_eq!(v1.permute(2, 1, 0), Vector3i::new(3, 2, 1));
     }
 
     #[test]
-    fn vec3_basic_operators() {
-        let a = Vec3i::new(0, 1, 2);
-        let b = Vec3i::new(3, 4, 5);
-        let c = Vec3f::new(5.0, 10.0, 20.0);
+    fn vector3_add() {
+        let v1 = Vector3i::new(2, 8, 4);
+        let v2 = Vector3i::new(3, 5, 6);
+        let v3 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+        let v4 = Vector3f::new(r64(3.0), r64(5.0), r64(6.0));
 
-        assert_eq!(a + b, Vec3i::new(3, 5, 7));
-        assert_eq!(a - b, Vec3i::new(-3, -3, -3));
-        assert_eq!(a * 2, Vec3i::new(0, 2, 4));
-        assert_eq!(a / 2, Vec3i::new(0, 0, 1));
-        assert_eq!(c / 2.0, Vec3f::new(2.5, 5.0, 10.0));
+        assert_eq!(v1 + v2, Vector3i::new(5, 13, 10));
+        assert_eq!(v3 + v4, Vector3f::new(r64(5.0), r64(13.0), r64(10.0)));
     }
 
     #[test]
-    fn vec3_assignment_operators() {
-        let mut a = Vec3i::new(0, 1, 2);
-        let b = Vec3i::new(3, 4, 5);
+    fn vector3_add_assign() {
+        let mut v1 = Vector3i::new(2, 8, 4);
+        let v2 = Vector3i::new(3, 5, 6);
+        v1 += v2;
 
-        a += b;
-        assert_eq!(a, Vec3i::new(3, 5, 7));
-        a -= b;
-        assert_eq!(a, Vec3i::new(0, 1, 2));
-        a *= 2;
-        assert_eq!(a, Vec3i::new(0, 2, 4));
-        a /= 2;
-        assert_eq!(a, Vec3i::new(0, 1, 2));
+        let mut v3 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+        let v4 = Vector3f::new(r64(3.0), r64(5.0), r64(6.0));
+        v3 += v4;
+
+        assert_eq!(v1, Vector3i::new(5, 13, 10));
+        assert_eq!(v3, Vector3f::new(r64(5.0), r64(13.0), r64(10.0)));
     }
 
     #[test]
-    fn vec3_has_nans() {
-        let f1 = Vec3f::new(1.0, 2.0, 3.0);
-        let f2 = Vec3f::new(1.0, std::f64::NAN, 3.0);
-        let f3 = Vec3f::new(1.0, std::f64::INFINITY, 3.0);
+    fn vector3_sub() {
+        let v1 = Vector3i::new(2, 8, 4);
+        let v2 = Vector3i::new(3, 5, 6);
+        let v3 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+        let v4 = Vector3f::new(r64(3.0), r64(5.0), r64(6.0));
 
-        assert!(!f1.has_nans());
-        assert!(f2.has_nans());
-        assert!(f3.has_nans());
+        assert_eq!(v1 - v2, Vector3i::new(-1, 3, -2));
+        assert_eq!(v3 - v4, Vector3f::new(r64(-1.0), r64(3.0), r64(-2.0)));
     }
 
     #[test]
-    fn vec3_dot() {
-        let a = Vec3i::new(-1, 2, -3);
-        let b = Vec3i::new(4, -5, 6);
-        assert_eq!(a.dot(b), -32);
-        assert_eq!(a.dot_abs(b), 32)
+    fn vector3_sub_assign() {
+        let mut v1 = Vector3i::new(2, 8, 4);
+        let v2 = Vector3i::new(3, 5, 6);
+        v1 -= v2;
+
+        let mut v3 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+        let v4 = Vector3f::new(r64(3.0), r64(5.0), r64(6.0));
+        v3 -= v4;
+
+        assert_eq!(v1, Vector3i::new(-1, 3, -2));
+        assert_eq!(v3, Vector3f::new(r64(-1.0), r64(3.0), r64(-2.0)));
     }
 
     #[test]
-    fn vec3_cross() {
-        let a = Vec3i::new(1, 2, 3);
-        let b = Vec3i::new(4, 5, 6);
-        assert_eq!(a.cross(b), Vec3::new(-3, 6, -3));
+    fn vector3_mul() {
+        let v1 = Vector3i::new(2, 8, 4);
+        let v2 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+
+        assert_eq!(v1 * 2, Vector3i::new(4, 16, 8));
+        assert_eq!(v2 * r64(2.0), Vector3f::new(r64(4.0), r64(16.0), r64(8.0)));
     }
 
     #[test]
-    fn vec3_length() {
-        let a = Vec3f::new(1.0, 2.0, 3.0);
-        assert_eq!(a.length(), 14.0.sqrt())
+    fn vector3_mul_assign() {
+        let mut v1 = Vector3i::new(2, 8, 4);
+        v1 *= 2;
+
+        let mut v2 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+        v2 *= r64(2.0);
+
+        assert_eq!(v1, Vector3i::new(4, 16, 8));
+        assert_eq!(v2, Vector3f::new(r64(4.0), r64(16.0), r64(8.0)));
     }
 
     #[test]
-    fn vec3_normalise() {
-        let a = Vec3f::new(2.0, 2.0, 2.0);
+    fn vector3_div() {
+        let v1 = Vector3i::new(2, 8, 4);
+        let v2 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+
+        assert_eq!(v1 / 2, Vector3i::new(1, 4, 2));
+        assert_eq!(v2 / r64(2.0), Vector3f::new(r64(1.0), r64(4.0), r64(2.0)));
+    }
+
+    #[test]
+    fn vector3_div_assign() {
+        let mut v1 = Vector3i::new(2, 8, 4);
+        v1 /= 2;
+
+        let mut v2 = Vector3f::new(r64(2.0), r64(8.0), r64(4.0));
+        v2 /= r64(2.0);
+
+        assert_eq!(v1, Vector3i::new(1, 4, 2));
+        assert_eq!(v2, Vector3f::new(r64(1.0), r64(4.0), r64(2.0)));
+    }
+
+    #[test]
+    fn vector3_neg() {
+        let v1 = Vector3i::new(-1, 2, -3);
+        let v2 = Vector3f::new(r64(-1.0), r64(2.0), r64(-3.0));
+
+        assert_eq!(-v1, Vector3i::new(1, -2, 3));
+        assert_eq!(-v2, Vector3f::new(r64(1.0), r64(-2.0), r64(3.0)));
+    }
+
+    #[test]
+    fn vector3_length_squared() {
+        let v1 = Vector3f::new(r64(1.0), r64(2.0), r64(3.0));
+
+        assert_eq!(v1.length_squared(), r64(14.0));
+    }
+
+    #[test]
+    fn vector3_length() {
+        let v1 = Vector3f::new(r64(1.0), r64(2.0), r64(3.0));
+
+        assert_eq!(v1.length(), r64(14.0).sqrt());
+    }
+
+    #[test]
+    fn vector3_normalise() {
+        let v1 = Vector3f::new(r64(2.0), r64(2.0), r64(2.0));
         assert_eq!(
-            a.normalise(),
-            Vec3f::new(1.0 / 3.0.sqrt(), 1.0 / 3.0.sqrt(), 1.0 / 3.0.sqrt())
-        );
-    }
-
-    #[test]
-    fn vec3_min() {
-        let a = Vec3i::new(1, 10, 3);
-        let b = Vec3i::new(2, 4, 7);
-        assert_eq!(a.min(b), Vec3i::new(1, 4, 3));
-
-        let c = Vec3f::new(1.0, 10.0, 3.0);
-        let d = Vec3f::new(2.0, 4.0, 7.0);
-        assert_eq!(c.min(d), Vec3f::new(1.0, 4.0, 3.0));
-    }
-
-    #[test]
-    fn vec3_max() {
-        let a = Vec3i::new(1, 10, 3);
-        let b = Vec3i::new(2, 4, 7);
-        assert_eq!(a.max(b), Vec3i::new(2, 10, 7));
-
-        let c = Vec3f::new(1.0, 10.0, 3.0);
-        let d = Vec3f::new(2.0, 4.0, 7.0);
-        assert_eq!(c.max(d), Vec3f::new(2.0, 10.0, 7.0));
-    }
-
-    #[test]
-    fn vec3_min_component() {
-        let a = Vec3i::new(1, 2, 3);
-        let b = Vec3f::new(1.0, 2.0, 3.0);
-        assert_eq!(a.min_component(), 1);
-        assert_eq!(b.min_component(), 1.0);
-    }
-
-    #[test]
-    fn vec3_max_component() {
-        let a = Vec3i::new(1, 2, 3);
-        let b = Vec3f::new(1.0, 2.0, 3.0);
-        assert_eq!(a.max_component(), 3);
-        assert_eq!(b.max_component(), 3.0);
-    }
-
-    #[test]
-    fn coordinate_system() {
-        let a = Vec3f::new(1.0, 0.0, 0.0);
-        assert_eq!(
-            a.coordinate_system(), 
-            (
-                Vec3f::new(1.0, 0.0, 0.0),
-                Vec3f::new(0.0, 0.0, 1.0),
-                Vec3f::new(0.0, -1.0, 0.0),
+            v1.normalise(),
+            Vector3f::new(
+                r64(1.0 / 3.0.sqrt()),
+                r64(1.0 / 3.0.sqrt()),
+                r64(1.0 / 3.0.sqrt())
             )
         );
+    }
 
-        let b = Vec3f::new(0.0, 1.0, 0.0);
+    #[test]
+    fn vector3_dot() {
+        let v1 = Vector3i::new(-1, 2, -3);
+        let v2 = Vector3i::new(4, -5, 6);
+
+        assert_eq!(v1.dot(v2), -32);
+        assert_eq!(v1.dot_abs(v2), 32);
+    }
+
+    #[test]
+    fn vector3_dot_normal3() {
+        let v1 = Vector3i::new(-1, 2, -3);
+        let n1 = Normal3i::new(4, -5, 6);
+
+        assert_eq!(v1.dot(n1), -32);
+        assert_eq!(v1.dot_abs(n1), 32);
+    }
+
+    #[test]
+    fn vector3_cross() {
+        let v1 = Vector3i::new(1, 2, 3);
+        let v2 = Vector3i::new(4, 5, 6);
+
+        assert_eq!(v1.cross(v2), Vector3::new(-3, 6, -3));
+    }
+
+    #[test]
+    fn vector3_cross_normal3() {
+        let v1 = Vector3i::new(1, 2, 3);
+        let n1 = Normal3i::new(4, 5, 6);
+
+        assert_eq!(v1.cross(n1), Vector3::new(-3, 6, -3));
+    }
+
+    #[test]
+    fn vector3_face_forward() {
+        let v1 = Vector3i::new(-1, 2, -3);
+        let v2 = Vector3i::new(4, -5, 6);
+        let v3 = Vector3i::new(-4, 5, -6);
+
+        assert_eq!(v1.face_forward(v2), -v1);
+        assert_eq!(v1.face_forward(v3), v1);
+    }
+
+    #[test]
+    fn vector3_face_forward_normal3() {
+        let v1 = Vector3i::new(-1, 2, -3);
+        let n1 = Normal3i::new(4, -5, 6);
+        let n2 = Normal3i::new(-4, 5, -6);
+
+        assert_eq!(v1.face_forward(n1), -v1);
+        assert_eq!(v1.face_forward(n2), v1);
+    }
+
+    #[test]
+    fn vector3_coordinate_system() {
+        let v1 = Vector3f::new(r64(1.0), r64(0.0), r64(0.0));
+        let v2 = Vector3f::new(r64(0.0), r64(1.0), r64(0.0));
+
         assert_eq!(
-            b.coordinate_system(), 
+            v1.coordinate_system(),
             (
-                Vec3f::new(0.0, 1.0, 0.0),
-                Vec3f::new(0.0, 0.0, -1.0),
-                Vec3f::new(-1.0, 0.0, 0.0),
+                Vector3f::new(r64(1.0), r64(0.0), r64(0.0)),
+                Vector3f::new(r64(0.0), r64(0.0), r64(1.0)),
+                Vector3f::new(r64(0.0), r64(-1.0), r64(0.0)),
+            )
+        );
+        assert_eq!(
+            v2.coordinate_system(),
+            (
+                Vector3f::new(r64(0.0), r64(1.0), r64(0.0)),
+                Vector3f::new(r64(0.0), r64(0.0), r64(-1.0)),
+                Vector3f::new(r64(-1.0), r64(0.0), r64(0.0)),
             )
         );
     }
