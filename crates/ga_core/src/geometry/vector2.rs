@@ -1,6 +1,6 @@
 //! A two-dimensional vector.
 
-use std::ops::{Add, AddAssign, Index, IndexMut, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 use crate::constants::Float;
 
@@ -77,21 +77,18 @@ impl<T> IndexMut<usize> for Vector2<T> {
 
 impl<T> Add for Vector2<T>
 where
-    T: Add<Output = T>
+    T: Add<Output = T>,
 {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        Vector2::new(
-            self.x + other.x,
-            self.y + other.y,
-        )
+        Vector2::new(self.x + other.x, self.y + other.y)
     }
 }
 
 impl<T> AddAssign for Vector2<T>
 where
-    T: AddAssign
+    T: AddAssign,
 {
     fn add_assign(&mut self, other: Self) {
         self.x += other.x;
@@ -103,25 +100,61 @@ where
 
 impl<T> Sub for Vector2<T>
 where
-    T: Sub<Output = T>
+    T: Sub<Output = T>,
 {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        Vector2::new(
-            self.x - other.x,
-            self.y - other.y,
-        )
+        Vector2::new(self.x - other.x, self.y - other.y)
     }
 }
 
 impl<T> SubAssign for Vector2<T>
-    where
-        T: SubAssign
+where
+    T: SubAssign,
 {
     fn sub_assign(&mut self, other: Self) {
         self.x -= other.x;
         self.y -= other.y;
+    }
+}
+
+// Multiplication traits
+
+impl<T> Mul<T> for Vector2<T>
+where
+    T: Copy + Mul<Output = T>,
+{
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self {
+        Vector2::new(self.x * rhs, self.y * rhs)
+    }
+}
+
+impl Mul<Vector2i> for i32 {
+    type Output = Vector2i;
+
+    fn mul(self, rhs: Vector2i) -> Vector2i {
+        Vector2i::new(rhs.x * self, rhs.y * self)
+    }
+}
+
+impl Mul<Vector2f> for Float {
+    type Output = Vector2f;
+
+    fn mul(self, rhs: Vector2f) -> Vector2f {
+        Vector2f::new(rhs.x * self, rhs.y * self)
+    }
+}
+
+impl<T> MulAssign<T> for Vector2<T>
+where
+    T: Copy + MulAssign<T>,
+{
+    fn mul_assign(&mut self, rhs: T) {
+        self.x *= rhs;
+        self.y *= rhs;
     }
 }
 
@@ -229,5 +262,32 @@ mod tests {
         given -= Vector2i::new(2, 3);
         let expected = Vector2i::new(-2, -2);
         assert_vector2i_equal(given, expected)
+    }
+
+    // Multiplication traits
+
+    #[test]
+    fn vector2_mul_vector_scalar() {
+        let given = Vector2i::new(0, 1) * 2;
+        let expected = Vector2i::new(0, 2);
+        assert_vector2i_equal(given, expected)
+    }
+
+    #[test]
+    fn vector2_mul_scalar_vector() {
+        let given = 2 * Vector2i::new(0, 1);
+        let expected = Vector2i::new(0, 2);
+        assert_vector2i_equal(given, expected);
+        let given = 2.0 * Vector2f::new(0.0, 1.0);
+        let expected = Vector2f::new(0.0, 2.0);
+        assert_vector2f_equal(given, expected);
+    }
+
+    #[test]
+    fn vector2_mul_assign() {
+        let mut given = Vector2i::new(0, 1);
+        given *= 2;
+        let expected = Vector2i::new(0, 2);
+        assert_vector2i_equal(given, expected);
     }
 }
