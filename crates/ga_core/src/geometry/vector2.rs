@@ -42,6 +42,13 @@ impl<T> Vector2<T> {
     }
 }
 
+impl Vector2f {
+    /// Check whether any component holds a NaN value.
+    pub fn has_nans(&self) -> bool {
+        self.x.is_nan() || self.y.is_nan()
+    }
+}
+
 // Indexing traits
 
 impl<T> Index<usize> for Vector2<T> {
@@ -95,6 +102,15 @@ mod tests {
         let given = Vector2f::new(0.0, 1.0);
         let expected = Vector2f { x: 0.0, y: 1.0 };
         assert_vector2f_equal(given, expected);
+    }
+
+    // NaN Checking
+    #[test]
+    fn vector2f_has_nans() {
+        let given = Vector2f::new(0.0, 1.0);
+        assert!(!given.has_nans());
+        let given = Vector2f::new(0.0 / 0.0, 1.0);
+        assert!(given.has_nans());
     }
 
     // Indexing traits
