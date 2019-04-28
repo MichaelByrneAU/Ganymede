@@ -1,6 +1,6 @@
 //! A two-dimensional vector.
 
-use std::ops::{Index, IndexMut};
+use std::ops::{Add, AddAssign, Index, IndexMut};
 
 use crate::constants::Float;
 
@@ -73,6 +73,32 @@ impl<T> IndexMut<usize> for Vector2<T> {
     }
 }
 
+// Addition traits
+
+impl<T> Add for Vector2<T>
+where
+    T: Add<Output = T>
+{
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Vector2::new(
+            self.x + other.x,
+            self.y + other.y,
+        )
+    }
+}
+
+impl<T> AddAssign for Vector2<T>
+where
+    T: AddAssign
+{
+    fn add_assign(&mut self, other: Vector2<T>) {
+        self.x += other.x;
+        self.y += other.y;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,6 +131,7 @@ mod tests {
     }
 
     // NaN Checking
+
     #[test]
     fn vector2f_has_nans() {
         let given = Vector2f::new(0.0, 1.0);
@@ -142,5 +169,22 @@ mod tests {
     fn vector2_index_mut_out_of_bounds() {
         let mut given = Vector2i::new(1, 2);
         given[2] = 3;
+    }
+
+    // Addition traits
+
+    #[test]
+    fn vector2_add() {
+        let given = Vector2i::new(0, 1) + Vector2i::new(2, 3);
+        let expected = Vector2i::new(2, 4);
+        assert_vector2i_equal(given, expected)
+    }
+
+    #[test]
+    fn vector2_add_assign() {
+        let mut given = Vector2i::new(0, 1);
+        given += Vector2i::new(2, 3);
+        let expected = Vector2i::new(2, 4);
+        assert_vector2i_equal(given, expected)
     }
 }
