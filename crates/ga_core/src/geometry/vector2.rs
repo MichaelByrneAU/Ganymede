@@ -1,6 +1,6 @@
 //! A two-dimensional vector.
 
-use std::ops::{Add, AddAssign, Index, IndexMut};
+use std::ops::{Add, AddAssign, Index, IndexMut, Sub, SubAssign};
 
 use crate::constants::Float;
 
@@ -93,9 +93,35 @@ impl<T> AddAssign for Vector2<T>
 where
     T: AddAssign
 {
-    fn add_assign(&mut self, other: Vector2<T>) {
+    fn add_assign(&mut self, other: Self) {
         self.x += other.x;
         self.y += other.y;
+    }
+}
+
+// Subtraction traits
+
+impl<T> Sub for Vector2<T>
+where
+    T: Sub<Output = T>
+{
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Vector2::new(
+            self.x - other.x,
+            self.y - other.y,
+        )
+    }
+}
+
+impl<T> SubAssign for Vector2<T>
+    where
+        T: SubAssign
+{
+    fn sub_assign(&mut self, other: Self) {
+        self.x -= other.x;
+        self.y -= other.y;
     }
 }
 
@@ -185,6 +211,23 @@ mod tests {
         let mut given = Vector2i::new(0, 1);
         given += Vector2i::new(2, 3);
         let expected = Vector2i::new(2, 4);
+        assert_vector2i_equal(given, expected)
+    }
+
+    // Subtraction traits
+
+    #[test]
+    fn vector2_sub() {
+        let given = Vector2i::new(0, 1) - Vector2i::new(2, 3);
+        let expected = Vector2i::new(-2, -2);
+        assert_vector2i_equal(given, expected)
+    }
+
+    #[test]
+    fn vector2_sub_assign() {
+        let mut given = Vector2i::new(0, 1);
+        given -= Vector2i::new(2, 3);
+        let expected = Vector2i::new(-2, -2);
         assert_vector2i_equal(given, expected)
     }
 }
