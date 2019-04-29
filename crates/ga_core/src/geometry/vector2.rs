@@ -42,10 +42,34 @@ impl<T> Vector2<T> {
     }
 }
 
+// Methods
+
 impl Vector2f {
     /// Check whether any component holds a NaN value.
     pub fn has_nans(&self) -> bool {
         self.x.is_nan() || self.y.is_nan()
+    }
+}
+
+// Associated functions
+
+impl<T> Vector2<T> {
+    /// Compute the dot product of two [`Vector2`]s.
+    ///
+    /// # Examples
+    /// ```
+    /// # use ga_core::geometry::vector2::{Vector2, Vector2i};
+    /// let v1 = Vector2i::new(0, 1);
+    /// let v2 = Vector2i::new(1, 2);
+    /// assert_eq!(Vector2::dot(v1, v2), 2);
+    /// ```
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn dot(v1: Self, v2: Self) -> T
+    where
+        T: Add<Output = T> + Mul<Output = T>,
+    {
+        v1.x * v2.x + v1.y * v2.y
     }
 }
 
@@ -212,7 +236,7 @@ mod tests {
         assert_vector2f_equal(given, expected);
     }
 
-    // NaN Checking
+    // Methods
 
     #[test]
     fn vector2f_has_nans() {
@@ -220,6 +244,15 @@ mod tests {
         assert!(!given.has_nans());
         let given = Vector2f::new(0.0 / 0.0, 1.0);
         assert!(given.has_nans());
+    }
+
+    // Associated functions
+
+    #[test]
+    fn vector2_dot() {
+        let given = Vector2::dot(Vector2i::new(0, 1), Vector2i::new(1, 2));
+        let expected = 2;
+        assert_eq!(given, expected);
     }
 
     // Indexing traits
