@@ -4,6 +4,8 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
+use num::Signed;
+
 use crate::constants::Float;
 
 /// A two-dimensional vector.
@@ -45,6 +47,21 @@ impl<T> Vector2<T> {
 }
 
 // Methods
+
+impl<T> Vector2<T> {
+    /// Return a new [`Vector2`] with absolute values of its components.
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn abs(&self) -> Self
+    where
+        T: Signed
+    {
+        Vector2::new(
+            self.x.abs(),
+            self.y.abs(),
+        )
+    }
+}
 
 impl Vector2f {
     /// Check whether any component holds a NaN value.
@@ -252,6 +269,13 @@ mod tests {
     }
 
     // Methods
+
+    #[test]
+    fn vector2_abs() {
+        let given = Vector2i::new(-1, 1).abs();
+        let expected = Vector2i::new(1, 1).abs();
+        assert_vector2i_equal(given, expected);
+    }
 
     #[test]
     fn vector2f_has_nans() {
