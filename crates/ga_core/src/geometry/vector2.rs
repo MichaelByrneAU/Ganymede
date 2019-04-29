@@ -54,12 +54,9 @@ impl<T> Vector2<T> {
     /// [`Vector2`]: struct.Vector2.html
     pub fn abs(&self) -> Self
     where
-        T: Signed
+        T: Signed,
     {
-        Vector2::new(
-            self.x.abs(),
-            self.y.abs(),
-        )
+        Vector2::new(self.x.abs(), self.y.abs())
     }
 }
 
@@ -89,6 +86,24 @@ impl<T> Vector2<T> {
         T: Add<Output = T> + Mul<Output = T>,
     {
         v1.x * v2.x + v1.y * v2.y
+    }
+
+    /// Compute the absolute dot product of two [`Vector2`]s.
+    ///
+    /// # Examples
+    /// ```
+    /// # use ga_core::geometry::vector2::{Vector2, Vector2i};
+    /// let v1 = Vector2i::new(-1, -1);
+    /// let v2 = Vector2i::new(1, 2);
+    /// assert_eq!(Vector2::dot_abs(v1, v2), 3);
+    /// ```
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn dot_abs(v1: Self, v2: Self) -> T
+    where
+        T: Signed + Add<Output = T> + Mul<Output = T>,
+    {
+        Vector2::dot(v1, v2).abs()
     }
 }
 
@@ -291,6 +306,13 @@ mod tests {
     fn vector2_dot() {
         let given = Vector2::dot(Vector2i::new(0, 1), Vector2i::new(1, 2));
         let expected = 2;
+        assert_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector2_dot_abs() {
+        let given = Vector2::dot_abs(Vector2i::new(-1, -1), Vector2i::new(1, 2));
+        let expected = 3;
         assert_eq!(given, expected);
     }
 
