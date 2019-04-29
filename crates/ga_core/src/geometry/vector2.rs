@@ -1,6 +1,8 @@
 //! A two-dimensional vector.
 
-use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+};
 
 use crate::constants::Float;
 
@@ -94,6 +96,19 @@ impl<T> IndexMut<usize> for Vector2<T> {
             1 => &mut self.y,
             _ => panic!("out of bounds access (Vector2)"),
         }
+    }
+}
+
+// Negation trait
+
+impl<T> Neg for Vector2<T>
+where
+    T: Neg<Output = T>,
+{
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Vector2::new(-self.x, -self.y)
     }
 }
 
@@ -284,6 +299,15 @@ mod tests {
     fn vector2_index_mut_out_of_bounds() {
         let mut given = Vector2i::new(1, 2);
         given[2] = 3;
+    }
+
+    // Negation trait
+
+    #[test]
+    fn vector2_neg() {
+        let given = -Vector2i::new(-1, 2);
+        let expected = Vector2i::new(1, -2);
+        assert_vector2i_equal(given, expected)
     }
 
     // Addition traits
