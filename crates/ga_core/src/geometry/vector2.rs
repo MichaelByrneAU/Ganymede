@@ -1,6 +1,6 @@
 //! A two-dimensional vector.
 
-use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 use crate::constants::Float;
 
@@ -158,6 +158,29 @@ where
     }
 }
 
+// Division traits
+
+impl Div<Float> for Vector2f {
+    type Output = Self;
+
+    fn div(self, rhs: Float) -> Self {
+        debug_assert!(rhs != 0.0);
+        let inv = 1.0 / rhs;
+
+        Vector2f::new(self.x * inv, self.y * inv)
+    }
+}
+
+impl DivAssign<Float> for Vector2f {
+    fn div_assign(&mut self, rhs: Float) {
+        debug_assert!(rhs != 0.0);
+        let inv = 1.0 / rhs;
+
+        self.x *= inv;
+        self.y *= inv;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -290,4 +313,22 @@ mod tests {
         let expected = Vector2i::new(0, 2);
         assert_vector2i_equal(given, expected);
     }
+
+    // Division traits
+
+    #[test]
+    fn vector2_div() {
+        let given = Vector2f::new(1.0, 2.0) / 2.0;
+        let expected = Vector2f::new(0.5, 1.0);
+        assert_vector2f_equal(given, expected);
+    }
+
+    #[test]
+    fn vector2_div_assign() {
+        let mut given = Vector2f::new(1.0, 2.0);
+        given /= 2.0;
+        let expected = Vector2f::new(0.5, 1.0);
+        assert_vector2f_equal(given, expected);
+    }
+
 }
