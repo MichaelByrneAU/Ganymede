@@ -4,7 +4,7 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-use num::Signed;
+use num::{Float as FloatNum, Signed};
 
 use crate::constants::Float;
 
@@ -49,6 +49,14 @@ impl<T> Vector2<T> {
 // Methods
 
 impl<T> Vector2<T> {
+    /// Check whether any component holds a NaN value.
+    pub fn has_nans(&self) -> bool
+    where
+        T: FloatNum,
+    {
+        self.x.is_nan() || self.y.is_nan()
+    }
+
     /// Return a new [`Vector2`] with absolute values of its components.
     ///
     /// [`Vector2`]: struct.Vector2.html
@@ -57,13 +65,6 @@ impl<T> Vector2<T> {
         T: Signed,
     {
         Vector2::new(self.x.abs(), self.y.abs())
-    }
-}
-
-impl Vector2f {
-    /// Check whether any component holds a NaN value.
-    pub fn has_nans(&self) -> bool {
-        self.x.is_nan() || self.y.is_nan()
     }
 }
 
