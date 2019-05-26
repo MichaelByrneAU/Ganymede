@@ -407,7 +407,7 @@ mod tests {
         let given = Vector2f::new(1.0, 2.0).min_component();
         let expected = 1.0;
         assert_approx_eq!(given, expected);
-        let given = Vector2i::new(1, 2).min_component();
+        let given = Vector2i::new(2, 1).min_component();
         let expected = 1;
         assert_eq!(given, expected);
     }
@@ -417,7 +417,7 @@ mod tests {
         let given = Vector2f::new(1.0, 2.0).max_component();
         let expected = 2.0;
         assert_approx_eq!(given, expected);
-        let given = Vector2i::new(1, 2).max_component();
+        let given = Vector2i::new(2, 1).max_component();
         let expected = 2;
         assert_eq!(given, expected);
     }
