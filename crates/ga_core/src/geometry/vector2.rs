@@ -1,5 +1,6 @@
 //! A two-dimensional vector.
 
+use std::cmp::{max, min};
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
@@ -65,6 +66,37 @@ impl<T> Vector2<T> {
         T: Signed,
     {
         Vector2::new(self.x.abs(), self.y.abs())
+    }
+
+    /// Return the squared length of the [`Vector2`].
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn length_squared(&self) -> T
+    where
+        T: Copy + Add<Output = T> + Mul<Output = T>
+    {
+        self.x * self.x + self.y * self.y
+    }
+
+    /// Return the length of the [`Vector2`].
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn length(&self) -> T
+    where
+        T: FloatNum
+    {
+        self.length_squared().sqrt()
+    }
+
+    pub fn min_component(&self) -> T
+    where
+        T: Copy + PartialOrd
+    {
+        if self.x > self.y {
+            self.y
+        } else {
+            self.x
+        }
     }
 }
 
@@ -299,6 +331,20 @@ mod tests {
         assert!(!given.has_nans());
         let given = Vector2f::new(0.0 / 0.0, 1.0);
         assert!(given.has_nans());
+    }
+
+    #[test]
+    fn vector2_length_squared() {
+        let given = Vector2f::new(2.0, 2.0).length_squared();
+        let expected = 8.0;
+        assert_approx_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector2_length() {
+        let given = Vector2f::new(2.0, 2.0).length();
+        let expected = 8.0.sqrt();
+        assert_approx_eq!(given, expected);
     }
 
     // Associated functions
