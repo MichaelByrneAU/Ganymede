@@ -1,6 +1,5 @@
 //! A two-dimensional vector.
 
-use std::cmp::{max, min};
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
@@ -73,7 +72,7 @@ impl<T> Vector2<T> {
     /// [`Vector2`]: struct.Vector2.html
     pub fn length_squared(&self) -> T
     where
-        T: Copy + Add<Output = T> + Mul<Output = T>
+        T: Copy + Add<Output = T> + Mul<Output = T>,
     {
         self.x * self.x + self.y * self.y
     }
@@ -83,20 +82,76 @@ impl<T> Vector2<T> {
     /// [`Vector2`]: struct.Vector2.html
     pub fn length(&self) -> T
     where
-        T: FloatNum
+        T: FloatNum,
     {
         self.length_squared().sqrt()
     }
 
+    /// Return the minimum component of the [`Vector2`].
+    ///
+    /// [`Vector2`]: struct.Vector2.html
     pub fn min_component(&self) -> T
     where
-        T: Copy + PartialOrd
+        T: Copy + PartialOrd,
     {
         if self.x > self.y {
             self.y
         } else {
             self.x
         }
+    }
+
+    /// Return the maximum component of the [`Vector2`].
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn max_component(&self) -> T
+    where
+        T: Copy + PartialOrd,
+    {
+        if self.x < self.y {
+            self.y
+        } else {
+            self.x
+        }
+    }
+
+    /// Return the index corresponding to the minimum component of the [`Vector2`].
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn min_dimension(&self) -> usize
+    where
+        T: Copy + PartialOrd,
+    {
+        if self.x > self.y {
+            1
+        } else {
+            0
+        }
+    }
+
+    /// Return the index corresponding to the maximum component of the [`Vector2`].
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn max_dimension(&self) -> usize
+    where
+        T: Copy + PartialOrd,
+    {
+        if self.x < self.y {
+            1
+        } else {
+            0
+        }
+    }
+
+    /// Return a new [`Vector2`] with the coordinates permuted according to the indices
+    /// provided.
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn permute(&self, x: usize, y: usize) -> Self
+    where
+        T: Copy,
+    {
+        Vector2::new(self[x], self[y])
     }
 }
 
@@ -345,6 +400,53 @@ mod tests {
         let given = Vector2f::new(2.0, 2.0).length();
         let expected = 8.0.sqrt();
         assert_approx_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector2_min_component() {
+        let given = Vector2f::new(1.0, 2.0).min_component();
+        let expected = 1.0;
+        assert_approx_eq!(given, expected);
+        let given = Vector2i::new(1, 2).min_component();
+        let expected = 1;
+        assert_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector2_max_component() {
+        let given = Vector2f::new(1.0, 2.0).max_component();
+        let expected = 2.0;
+        assert_approx_eq!(given, expected);
+        let given = Vector2i::new(1, 2).max_component();
+        let expected = 2;
+        assert_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector2_min_dimension() {
+        let given = Vector2f::new(1.0, 2.0).min_dimension();
+        let expected = 0;
+        assert_eq!(given, expected);
+        let given = Vector2i::new(2, 1).min_dimension();
+        let expected = 1;
+        assert_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector2_max_dimension() {
+        let given = Vector2f::new(1.0, 2.0).max_dimension();
+        let expected = 1;
+        assert_eq!(given, expected);
+        let given = Vector2i::new(2, 1).max_dimension();
+        let expected = 0;
+        assert_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector2_permute() {
+        let given = Vector2i::new(1, 2).permute(1, 0);
+        let expected = Vector2i::new(2, 1);
+        assert_vector2i_equal(given, expected);
     }
 
     // Associated functions
