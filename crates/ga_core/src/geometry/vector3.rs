@@ -4,7 +4,7 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-use num::{Float as FloatNum, Signed};
+use num::Signed;
 
 use crate::constants::Float;
 
@@ -50,14 +50,6 @@ impl<T> Vector3<T> {
 // Methods
 
 impl<T> Vector3<T> {
-    /// Check whether any component holds a NaN value.
-    pub fn has_nans(&self) -> bool
-    where
-        T: FloatNum,
-    {
-        self.x.is_nan() || self.y.is_nan() || self.z.is_nan()
-    }
-
     /// Return a new [`Vector3`] with absolute values of its components.
     ///
     /// [`Vector3`]: struct.Vector3.html
@@ -76,16 +68,6 @@ impl<T> Vector3<T> {
         T: Copy + Add<Output = T> + Mul<Output = T>,
     {
         self.x * self.x + self.y * self.y + self.z * self.z
-    }
-
-    /// Return the length of the [`Vector3`].
-    ///
-    /// [`Vector3`]: struct.Vector3.html
-    pub fn length(&self) -> T
-    where
-        T: FloatNum,
-    {
-        self.length_squared().sqrt()
     }
 
     /// Return the minimum component of the [`Vector3`].
@@ -164,6 +146,27 @@ impl<T> Vector3<T> {
     }
 }
 
+impl Vector3<Float> {
+    /// Check whether any component holds a NaN value.
+    pub fn has_nans(&self) -> bool {
+        self.x.is_nan() || self.y.is_nan() || self.z.is_nan()
+    }
+
+    /// Return the length of the [`Vector3`].
+    ///
+    /// [`Vector3`]: struct.Vector3.html
+    pub fn length(&self) -> Float {
+        self.length_squared().sqrt()
+    }
+
+    /// Return a normalised version of a [`Vector3`].
+    ///
+    /// [`Vector3`]: struct.Vector3.html
+    pub fn normalise(&self) -> Self {
+        *self / self.length()
+    }
+}
+
 // Associated functions
 
 impl<T> Vector3<T> {
@@ -201,6 +204,38 @@ impl<T> Vector3<T> {
         T: Signed + Add<Output = T> + Mul<Output = T>,
     {
         Vector3::dot(v1, v2).abs()
+    }
+
+    /// Compute the cross product of two [`Vector3`]s.
+    ///
+    /// [`Vector3`]: struct.Vector3.html
+    pub fn cross(v1: Self, v2: Self) -> Self
+    where
+        T: Copy + Signed + Sub<Output = T> + Mul<Output = T>,
+    {
+        Vector3::new(
+            v1.y * v2.z - v1.z * v2.y,
+            v1.z * v2.x - v1.x * v2.z,
+            v1.x * v2.y - v1.y * v2.x,
+        )
+    }
+}
+
+impl Vector3<Float> {
+    /// Create a coordinate system from a [`Vector3`].
+    ///
+    /// This assumes that `v1` has already been normalised.
+    ///
+    /// [`Vector3`]: struct.Vector3.html
+    pub fn coordinate_system(v1: Self) -> (Self, Self, Self) {
+        let v2;
+        if v1.x.abs() > v1.y.abs() {
+            v2 = Vector3::new(-v1.z, 0.0, v1.x) / (v1.x * v1.x + v1.z * v1.z).sqrt();
+        } else {
+            v2 = Vector3::new(0.0, v1.z, -v1.y) / (v1.y * v1.y + v1.z * v1.z).sqrt();
+        }
+        let v3 = Vector3::cross(v1, v2);
+        (v1, v2, v3)
     }
 }
 
@@ -419,8 +454,15 @@ mod tests {
     #[test]
     fn vector3_length() {
         let given = Vector3f::new(2.0, 2.0, 2.0).length();
-        let expected = 12.0.sqrt();
+        let expected = 12.0_f32.sqrt();
         assert_approx_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector3_normalise() {
+        let given = Vector3f::new(0.0, 0.0, 1.0).normalise();
+        let expected = Vector3f::new(0.0, 0.0, 1.0);
+        assert_vector3f_equal(given, expected);
     }
 
     #[test]
@@ -496,6 +538,26 @@ mod tests {
         let given = Vector3::dot_abs(Vector3i::new(-1, -1, -1), Vector3i::new(1, 2, 3));
         let expected = 6;
         assert_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector3_cross() {
+        let given = Vector3::cross(Vector3i::new(3, -2, -2), Vector3i::new(-1, 0, 5));
+        let expected = Vector3i::new(-10, -13, -2);
+        assert_vector3i_equal(given, expected);
+    }
+
+    #[test]
+    fn vector3_coordinate_system() {
+        let (given1, given2, given3) = Vector3f::coordinate_system(Vector3f::new(0.0, 0.0, 1.0));
+        let (expec1, expec2, expec3) = (
+            Vector3f::new(0.0, 0.0, 1.0),
+            Vector3f::new(0.0, 1.0, 0.0),
+            Vector3f::new(-1.0, 0.0, 0.0),
+        );
+        assert_vector3f_equal(given1, expec1);
+        assert_vector3f_equal(given2, expec2);
+        assert_vector3f_equal(given3, expec3);
     }
 
     // Indexing traits
