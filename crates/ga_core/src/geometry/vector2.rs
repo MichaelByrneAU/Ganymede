@@ -4,7 +4,7 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
-use num::{Float as FloatNum, Signed};
+use num::Signed;
 
 use crate::constants::Float;
 
@@ -49,14 +49,6 @@ impl<T> Vector2<T> {
 // Methods
 
 impl<T> Vector2<T> {
-    /// Check whether any component holds a NaN value.
-    pub fn has_nans(&self) -> bool
-    where
-        T: FloatNum,
-    {
-        self.x.is_nan() || self.y.is_nan()
-    }
-
     /// Return a new [`Vector2`] with absolute values of its components.
     ///
     /// [`Vector2`]: struct.Vector2.html
@@ -75,16 +67,6 @@ impl<T> Vector2<T> {
         T: Copy + Add<Output = T> + Mul<Output = T>,
     {
         self.x * self.x + self.y * self.y
-    }
-
-    /// Return the length of the [`Vector2`].
-    ///
-    /// [`Vector2`]: struct.Vector2.html
-    pub fn length(&self) -> T
-    where
-        T: FloatNum,
-    {
-        self.length_squared().sqrt()
     }
 
     /// Return the minimum component of the [`Vector2`].
@@ -152,6 +134,27 @@ impl<T> Vector2<T> {
         T: Copy,
     {
         Vector2::new(self[x], self[y])
+    }
+}
+
+impl Vector2<Float> {
+    /// Check whether any component holds a NaN value.
+    pub fn has_nans(&self) -> bool {
+        self.x.is_nan() || self.y.is_nan()
+    }
+
+    /// Return the length of the [`Vector2`].
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn length(&self) -> Float {
+        self.length_squared().sqrt()
+    }
+
+    /// Return a normalised version of a [`Vector2`].
+    ///
+    /// [`Vector2`]: struct.Vector2.html
+    pub fn normalise(&self) -> Self {
+        *self / self.length()
     }
 }
 
@@ -398,8 +401,15 @@ mod tests {
     #[test]
     fn vector2_length() {
         let given = Vector2f::new(2.0, 2.0).length();
-        let expected = 8.0.sqrt();
+        let expected = 8.0_f32.sqrt();
         assert_approx_eq!(given, expected);
+    }
+
+    #[test]
+    fn vector2_normalise() {
+        let given = Vector2f::new(0.0, 1.0).normalise();
+        let expected = Vector2f::new(0.0, 1.0);
+        assert_vector2f_equal(given, expected);
     }
 
     #[test]
