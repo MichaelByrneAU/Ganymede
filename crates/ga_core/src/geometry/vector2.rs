@@ -139,22 +139,22 @@ impl<T> Vector2<T> {
 
 impl Vector2<Float> {
     /// Check whether any component holds a NaN value.
-    pub fn has_nans(&self) -> bool {
+    pub fn has_nans(self) -> bool {
         self.x.is_nan() || self.y.is_nan()
     }
 
     /// Return the length of the [`Vector2`].
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn length(&self) -> Float {
+    pub fn length(self) -> Float {
         self.length_squared().sqrt()
     }
 
     /// Return a normalised version of a [`Vector2`].
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn normalise(&self) -> Self {
-        *self / self.length()
+    pub fn normalise(self) -> Self {
+        self / self.length()
     }
 }
 
@@ -322,6 +322,7 @@ where
 
 // Division traits
 
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Div<Float> for Vector2f {
     type Output = Self;
 
@@ -387,7 +388,7 @@ mod tests {
     fn vector2f_has_nans() {
         let given = Vector2f::new(0.0, 1.0);
         assert!(!given.has_nans());
-        let given = Vector2f::new(0.0 / 0.0, 1.0);
+        let given = Vector2f::new(std::f32::NAN, 1.0);
         assert!(given.has_nans());
     }
 

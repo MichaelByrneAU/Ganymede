@@ -228,12 +228,11 @@ impl Vector3<Float> {
     ///
     /// [`Vector3`]: struct.Vector3.html
     pub fn coordinate_system(v1: Self) -> (Self, Self, Self) {
-        let v2;
-        if v1.x.abs() > v1.y.abs() {
-            v2 = Vector3::new(-v1.z, 0.0, v1.x) / (v1.x * v1.x + v1.z * v1.z).sqrt();
+        let v2 = if v1.x.abs() > v1.y.abs() {
+            Vector3::new(-v1.z, 0.0, v1.x) / (v1.x * v1.x + v1.z * v1.z).sqrt()
         } else {
-            v2 = Vector3::new(0.0, v1.z, -v1.y) / (v1.y * v1.y + v1.z * v1.z).sqrt();
-        }
+            Vector3::new(0.0, v1.z, -v1.y) / (v1.y * v1.y + v1.z * v1.z).sqrt()
+        };
         let v3 = Vector3::cross(v1, v2);
         (v1, v2, v3)
     }
@@ -368,6 +367,7 @@ where
 
 // Division traits
 
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Div<Float> for Vector3f {
     type Output = Self;
 
@@ -440,7 +440,7 @@ mod tests {
     fn vector3f_has_nans() {
         let given = Vector3f::new(0.0, 1.0, 2.0);
         assert!(!given.has_nans());
-        let given = Vector3f::new(0.0 / 0.0, 1.0, 2.0);
+        let given = Vector3f::new(std::f32::NAN, 1.0, 2.0);
         assert!(given.has_nans());
     }
 
