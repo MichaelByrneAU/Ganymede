@@ -41,14 +41,36 @@ impl<T> Point3<T> {
     }
 }
 
+// From traits
+
+impl From<Point3f> for Point3i {
+    fn from(p3f: Point3f) -> Self {
+        Point3i::new(p3f.x as i32, p3f.y as i32, p3f.z as i32)
+    }
+}
+
+impl From<Point3i> for Point3f {
+    fn from(p3i: Point3i) -> Self {
+        Point3f::new(p3i.x as Float, p3i.y as Float, p3i.z as Float)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use assert_approx_eq::assert_approx_eq;
 
     fn assert_point3i_equal(p1: Point3i, p2: Point3i) {
         assert_eq!(p1.x, p2.x);
         assert_eq!(p1.y, p2.y);
         assert_eq!(p1.z, p2.z);
+    }
+
+    fn assert_point3f_equal(p1: Point3f, p2: Point3f) {
+        assert_approx_eq!(p1.x, p2.x);
+        assert_approx_eq!(p1.y, p2.y);
+        assert_approx_eq!(p1.z, p2.z);
     }
 
     // Construction
@@ -58,5 +80,21 @@ mod tests {
         let given = Point3i::new(0, 1, 2);
         let expected = Point3i { x: 0, y: 1, z: 2 };
         assert_point3i_equal(given, expected);
+    }
+
+    // From traits
+
+    #[test]
+    fn point3i_from_point3f() {
+        let given = Point3i::from(Point3f::new(0.0, 1.0, 2.0));
+        let expected = Point3i::new(0, 1, 2);
+        assert_point3i_equal(given, expected);
+    }
+
+    #[test]
+    fn point3f_from_point3i() {
+        let given = Point3f::from(Point3i::new(0, 1, 2));
+        let expected = Point3f::new(0.0, 1.0, 2.0);
+        assert_point3f_equal(given, expected);
     }
 }
