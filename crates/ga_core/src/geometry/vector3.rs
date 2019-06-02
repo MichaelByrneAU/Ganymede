@@ -53,7 +53,7 @@ impl<T> Vector3<T> {
     /// Return a new [`Vector3`] with absolute values of its components.
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn abs(&self) -> Self
+    pub fn abs(self) -> Self
     where
         T: Signed,
     {
@@ -63,7 +63,7 @@ impl<T> Vector3<T> {
     /// Return the squared length of the [`Vector3`].
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn length_squared(&self) -> T
+    pub fn length_squared(self) -> T
     where
         T: Copy + Add<Output = T> + Mul<Output = T>,
     {
@@ -73,7 +73,7 @@ impl<T> Vector3<T> {
     /// Return the minimum component of the [`Vector3`].
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn min_component(&self) -> T
+    pub fn min_component(self) -> T
     where
         T: Copy + PartialOrd,
     {
@@ -89,7 +89,7 @@ impl<T> Vector3<T> {
     /// Return the maximum component of the [`Vector3`].
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn max_component(&self) -> T
+    pub fn max_component(self) -> T
     where
         T: Copy + PartialOrd,
     {
@@ -105,7 +105,7 @@ impl<T> Vector3<T> {
     /// Return the index corresponding to the minimum component of the [`Vector3`].
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn min_dimension(&self) -> usize
+    pub fn min_dimension(self) -> usize
     where
         T: Copy + PartialOrd,
     {
@@ -121,7 +121,7 @@ impl<T> Vector3<T> {
     /// Return the index corresponding to the maximum component of the [`Vector3`].
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn max_dimension(&self) -> usize
+    pub fn max_dimension(self) -> usize
     where
         T: Copy + PartialOrd,
     {
@@ -138,7 +138,7 @@ impl<T> Vector3<T> {
     /// provided.
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn permute(&self, x: usize, y: usize, z: usize) -> Self
+    pub fn permute(self, x: usize, y: usize, z: usize) -> Self
     where
         T: Copy,
     {
@@ -148,22 +148,22 @@ impl<T> Vector3<T> {
 
 impl Vector3<Float> {
     /// Check whether any component holds a NaN value.
-    pub fn has_nans(&self) -> bool {
+    pub fn has_nans(self) -> bool {
         self.x.is_nan() || self.y.is_nan() || self.z.is_nan()
     }
 
     /// Return the length of the [`Vector3`].
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn length(&self) -> Float {
+    pub fn length(self) -> Float {
         self.length_squared().sqrt()
     }
 
     /// Return a normalised version of a [`Vector3`].
     ///
     /// [`Vector3`]: struct.Vector3.html
-    pub fn normalise(&self) -> Self {
-        *self / self.length()
+    pub fn normalise(self) -> Self {
+        self / self.length()
     }
 }
 

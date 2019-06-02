@@ -52,7 +52,7 @@ impl<T> Vector2<T> {
     /// Return a new [`Vector2`] with absolute values of its components.
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn abs(&self) -> Self
+    pub fn abs(self) -> Self
     where
         T: Signed,
     {
@@ -62,7 +62,7 @@ impl<T> Vector2<T> {
     /// Return the squared length of the [`Vector2`].
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn length_squared(&self) -> T
+    pub fn length_squared(self) -> T
     where
         T: Copy + Add<Output = T> + Mul<Output = T>,
     {
@@ -72,7 +72,7 @@ impl<T> Vector2<T> {
     /// Return the minimum component of the [`Vector2`].
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn min_component(&self) -> T
+    pub fn min_component(self) -> T
     where
         T: Copy + PartialOrd,
     {
@@ -86,7 +86,7 @@ impl<T> Vector2<T> {
     /// Return the maximum component of the [`Vector2`].
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn max_component(&self) -> T
+    pub fn max_component(self) -> T
     where
         T: Copy + PartialOrd,
     {
@@ -100,7 +100,7 @@ impl<T> Vector2<T> {
     /// Return the index corresponding to the minimum component of the [`Vector2`].
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn min_dimension(&self) -> usize
+    pub fn min_dimension(self) -> usize
     where
         T: Copy + PartialOrd,
     {
@@ -114,7 +114,7 @@ impl<T> Vector2<T> {
     /// Return the index corresponding to the maximum component of the [`Vector2`].
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn max_dimension(&self) -> usize
+    pub fn max_dimension(self) -> usize
     where
         T: Copy + PartialOrd,
     {
@@ -129,7 +129,7 @@ impl<T> Vector2<T> {
     /// provided.
     ///
     /// [`Vector2`]: struct.Vector2.html
-    pub fn permute(&self, x: usize, y: usize) -> Self
+    pub fn permute(self, x: usize, y: usize) -> Self
     where
         T: Copy,
     {
@@ -380,7 +380,7 @@ mod tests {
     #[test]
     fn vector2_abs() {
         let given = Vector2i::new(-1, 1).abs();
-        let expected = Vector2i::new(1, 1).abs();
+        let expected = Vector2i::new(1, 1);
         assert_vector2i_equal(given, expected);
     }
 

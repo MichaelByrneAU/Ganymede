@@ -1,6 +1,5 @@
 //! A two-dimensional point.
 
-use std::convert::From;
 use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 use num::Signed;
