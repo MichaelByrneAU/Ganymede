@@ -439,6 +439,22 @@ mod tests {
         let _ = Point2i::new(1, 2)[2];
     }
 
+    #[test]
+    fn point2_index_mut() {
+        let mut given = Point2i::new(1, 2);
+        given[0] = 2;
+        given[1] = 3;
+        assert_eq!(given[0], 2);
+        assert_eq!(given[1], 3);
+    }
+
+    #[test]
+    #[should_panic]
+    fn point2_index_mut_out_of_bounds() {
+        let mut given = Point2i::new(1, 2);
+        given[2] = 3;
+    }
+
     // Addition traits
 
     #[test]

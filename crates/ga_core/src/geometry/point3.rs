@@ -441,6 +441,22 @@ mod tests {
         let _ = Point3i::new(1, 2, 3)[3];
     }
 
+    #[test]
+    fn point3_index_mut() {
+        let mut given = Point3i::new(1, 2, 3);
+        given[0] = 2;
+        given[1] = 3;
+        given[2] = 4;
+        assert_point3i_equal(given, Point3i::new(2, 3, 4));
+    }
+
+    #[test]
+    #[should_panic]
+    fn point3_index_mut_out_of_bounds() {
+        let mut given = Point3i::new(1, 2, 3);
+        given[3] = 4;
+    }
+
     // Addition traits
 
     #[test]
