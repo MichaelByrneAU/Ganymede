@@ -7,6 +7,7 @@ use std::ops::{
 use num::Signed;
 
 use crate::constants::Float;
+use crate::geometry::point3::{Point3, Point3f, Point3i};
 
 /// A three-dimensional vector.
 #[derive(Debug, Default, Copy, Clone)]
@@ -238,6 +239,26 @@ impl Vector3<Float> {
     }
 }
 
+// From traits
+
+impl<T> From<Point3<T>> for Vector3<T> {
+    fn from(p3: Point3<T>) -> Self {
+        Vector3::new(p3.x, p3.y, p3.z)
+    }
+}
+
+impl From<Point3i> for Vector3f {
+    fn from(p3i: Point3i) -> Self {
+        Vector3f::new(p3i.x as Float, p3i.y as Float, p3i.z as Float)
+    }
+}
+
+impl From<Point3f> for Vector3i {
+    fn from(p3f: Point3f) -> Self {
+        Vector3i::new(p3f.x as i32, p3f.y as i32, p3f.z as i32)
+    }
+}
+
 // Indexing traits
 
 impl<T> Index<usize> for Vector3<T> {
@@ -393,6 +414,8 @@ impl DivAssign<Float> for Vector3f {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::geometry::point3::{Point3f, Point3i};
+
     use assert_approx_eq::assert_approx_eq;
 
     fn assert_vector3i_equal(v1: Vector3i, v2: Vector3i) {
@@ -558,6 +581,28 @@ mod tests {
         assert_vector3f_equal(given1, expec1);
         assert_vector3f_equal(given2, expec2);
         assert_vector3f_equal(given3, expec3);
+    }
+
+    // From traits
+
+    #[test]
+    fn vector3i_from_point3() {
+        let given = Vector3i::from(Point3i::new(0, 1, 2));
+        let expected = Vector3i::new(0, 1, 2);
+        assert_vector3i_equal(given, expected);
+        let given = Vector3i::from(Point3f::new(0.0, 1.0, 2.0));
+        let expected = Vector3i::new(0, 1, 2);
+        assert_vector3i_equal(given, expected);
+    }
+
+    #[test]
+    fn vector3f_from_point3() {
+        let given = Vector3f::from(Point3i::new(0, 1, 2));
+        let expected = Vector3f::new(0.0, 1.0, 2.0);
+        assert_vector3f_equal(given, expected);
+        let given = Vector3f::from(Point3f::new(0.0, 1.0, 2.0));
+        let expected = Vector3f::new(0.0, 1.0, 2.0);
+        assert_vector3f_equal(given, expected);
     }
 
     // Indexing traits

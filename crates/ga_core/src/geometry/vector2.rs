@@ -7,6 +7,7 @@ use std::ops::{
 use num::Signed;
 
 use crate::constants::Float;
+use crate::geometry::point2::{Point2, Point2f, Point2i};
 
 /// A two-dimensional vector.
 #[derive(Debug, Default, Copy, Clone)]
@@ -198,6 +199,26 @@ impl<T> Vector2<T> {
     }
 }
 
+// From traits
+
+impl<T> From<Point2<T>> for Vector2<T> {
+    fn from(p2: Point2<T>) -> Self {
+        Vector2::new(p2.x, p2.y)
+    }
+}
+
+impl From<Point2i> for Vector2f {
+    fn from(p2i: Point2i) -> Self {
+        Vector2f::new(p2i.x as Float, p2i.y as Float)
+    }
+}
+
+impl From<Point2f> for Vector2i {
+    fn from(p2f: Point2f) -> Self {
+        Vector2i::new(p2f.x as i32, p2f.y as i32)
+    }
+}
+
 // Indexing traits
 
 impl<T> Index<usize> for Vector2<T> {
@@ -347,6 +368,8 @@ impl DivAssign<Float> for Vector2f {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::geometry::point2::{Point2f, Point2i};
+
     use assert_approx_eq::assert_approx_eq;
 
     fn assert_vector2i_equal(v1: Vector2i, v2: Vector2i) {
@@ -474,6 +497,28 @@ mod tests {
         let given = Vector2::dot_abs(Vector2i::new(-1, -1), Vector2i::new(1, 2));
         let expected = 3;
         assert_eq!(given, expected);
+    }
+
+    // From traits
+
+    #[test]
+    fn vector2i_from_point2() {
+        let given = Vector2i::from(Point2i::new(0, 1));
+        let expected = Vector2i::new(0, 1);
+        assert_vector2i_equal(given, expected);
+        let given = Vector2i::from(Point2f::new(0.0, 1.0));
+        let expected = Vector2i::new(0, 1);
+        assert_vector2i_equal(given, expected);
+    }
+
+    #[test]
+    fn vector2f_from_point2() {
+        let given = Vector2f::from(Point2i::new(0, 1));
+        let expected = Vector2f::new(0.0, 1.0);
+        assert_vector2f_equal(given, expected);
+        let given = Vector2f::from(Point2f::new(0.0, 1.0));
+        let expected = Vector2f::new(0.0, 1.0);
+        assert_vector2f_equal(given, expected);
     }
 
     // Indexing traits
