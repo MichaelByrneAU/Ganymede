@@ -73,6 +73,67 @@ impl<T> IndexMut<usize> for Normal3<T> {
     }
 }
 
+// Negation trait
+
+impl<T> Neg for Normal3<T>
+where
+    T: Neg<Output = T>,
+{
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Normal3::new(-self.x, -self.y, -self.z)
+    }
+}
+
+// Addition traits
+
+impl<T> Add for Normal3<T>
+where
+    T: Add<Output = T>,
+{
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Normal3::new(self.x + other.x, self.y + other.y, self.z + other.z)
+    }
+}
+
+impl<T> AddAssign for Normal3<T>
+where
+    T: AddAssign,
+{
+    fn add_assign(&mut self, other: Self) {
+        self.x += other.x;
+        self.y += other.y;
+        self.z += other.z;
+    }
+}
+
+// Subtraction traits
+
+impl<T> Sub for Normal3<T>
+where
+    T: Sub<Output = T>,
+{
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Normal3::new(self.x - other.x, self.y - other.y, self.z - other.z)
+    }
+}
+
+impl<T> SubAssign for Normal3<T>
+where
+    T: SubAssign,
+{
+    fn sub_assign(&mut self, other: Self) {
+        self.x -= other.x;
+        self.y -= other.y;
+        self.z -= other.z;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,4 +200,48 @@ mod tests {
         let mut given = Normal3f::new(1.0, 2.0, 3.0);
         given[3] = 4.0;
     }
+
+    // Negation trait
+
+    #[test]
+    fn normal3_neg() {
+        let given = -Normal3f::new(-1.0, 2.0, -3.0);
+        let expected = Normal3f::new(1.0, -2.0, 3.0);
+        assert_normal3f_equal(given, expected)
+    }
+
+    // Addition traits
+
+    #[test]
+    fn normal3_add() {
+        let given = Normal3f::new(0.0, 1.0, 2.0) + Normal3f::new(2.0, 3.0, 4.0);
+        let expected = Normal3f::new(2.0, 4.0, 6.0);
+        assert_normal3f_equal(given, expected)
+    }
+
+    #[test]
+    fn normal3_add_assign() {
+        let mut given = Normal3f::new(0.0, 1.0, 2.0);
+        given += Normal3f::new(2.0, 3.0, 4.0);
+        let expected = Normal3f::new(2.0, 4.0, 6.0);
+        assert_normal3f_equal(given, expected)
+    }
+
+    // Subtraction traits
+
+    #[test]
+    fn normal3_sub() {
+        let given = Normal3f::new(0.0, 1.0, 2.0) - Normal3f::new(2.0, 3.0, 4.0);
+        let expected = Normal3f::new(-2.0, -2.0, -2.0);
+        assert_normal3f_equal(given, expected)
+    }
+
+    #[test]
+    fn normal3_sub_assign() {
+        let mut given = Normal3f::new(0.0, 1.0, 2.0);
+        given -= Normal3f::new(2.0, 3.0, 4.0);
+        let expected = Normal3f::new(-2.0, -2.0, -2.0);
+        assert_normal3f_equal(given, expected)
+    }
+
 }
